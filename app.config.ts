@@ -25,7 +25,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       }
     ],
     "expo-notifications",
-    "expo-dev-client",
     "expo-camera",
     "react-native-health",
     [

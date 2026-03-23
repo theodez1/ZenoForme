@@ -44,7 +44,7 @@ if (getRNMinorVersion() >= 75) {
   }
 }
 
-rootProject.name = 'Mon Suivi'
+rootProject.name = 'Zeno Forme'
 
 dependencyResolutionManagement {
   versionCatalogs {

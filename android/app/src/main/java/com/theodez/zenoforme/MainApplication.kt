@@ -1,4 +1,4 @@
-package com.theodez.weighttracker
+package com.theodez.zenoforme
 
 import android.app.Application
 import android.content.res.Configuration

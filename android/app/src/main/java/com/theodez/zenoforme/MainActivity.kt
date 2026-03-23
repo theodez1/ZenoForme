@@ -1,4 +1,4 @@
-package com.theodez.weighttracker
+package com.theodez.zenoforme
 
 import android.os.Build
 import android.os.Bundle
