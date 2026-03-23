@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +13,7 @@ import HistoryScreen from './screens/HistoryScreen';
 import EvolutionScreen from './screens/EvolutionScreen';
 import PhotosScreen from './screens/PhotosScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import { initHealth } from './utils/health';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -85,6 +86,10 @@ function AppNavigator() {
 }
 
 export default function App() {
+  useEffect(() => {
+    initHealth().catch(() => {}); // Request HealthKit permissions on startup
+  }, []);
+
   return (
     <SafeAreaProvider>
       <View style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
