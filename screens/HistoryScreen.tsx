@@ -213,7 +213,7 @@ function SummaryDashboard({ days, profile }: { days: DayEntry[]; profile: UserPr
     ? Math.round(recent.reduce((s, d) => s + (d.calories || 0), 0) / 7)
     : 0;
   const avgSteps = recent.length > 0
-    ? Math.round(recent.reduce((s, d) => s + (typeof d.walk === 'number' ? d.walk : 0), 0) / 7)
+    ? Math.round(recent.reduce((s, d) => s + (d.steps || 0), 0) / 7)
     : 0;
 
   // Cherche les 2 dernières pesées dans tout l'historique (pas juste la semaine)
@@ -333,7 +333,7 @@ const ms = StyleSheet.create({
 function DayCard({ entry, goal }: { entry: DayEntry; goal?: number }) {
   const score = getDayScore(entry, goal);
   const scoreColor = score >= 75 ? C.green : score >= 40 ? C.accent : C.red;
-  const steps = typeof entry.walk === 'number' ? entry.walk : 0;
+  const steps = entry.steps || 0;
 
   return (
     <View style={dc.row}>

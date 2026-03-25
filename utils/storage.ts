@@ -14,7 +14,8 @@ export interface FoodItem {
 
 export interface DayEntry {
   date: string;           // YYYY-MM-DD
-  walk: boolean | number; // false | true | nombre de pas (HealthKit)
+  walk: boolean;          // false | true (validation manuelle)
+  steps: number;          // nombre de pas (HealthKit)
   food: number | null;    // legacy — non utilisé (conservé pour migration)
   water: number;          // verres
   sleep: number | null;   // heures (HealthKit)
@@ -74,7 +75,15 @@ export async function saveDay(entry: DayEntry): Promise<void> {
 }
 
 export async function updateDay(date: string, patch: Partial<DayEntry>): Promise<void> {
-  const existing = await getDay(date) || { date, walk: false, food: null, water: 0, sleep: null };
+  // On s'assure que la valeur initiale de walk est compatible (false par exemple)
+  const existing = await getDay(date) || {
+    date,
+    walk: false,
+    steps: 0,
+    food: null,
+    water: 0,
+    sleep: null
+  };
   await saveDay({ ...existing, ...patch });
 }
 
@@ -90,6 +99,19 @@ export async function getDay(date: string): Promise<DayEntry | null> {
     else if (data.food === 'bad') data.food = 1;
     else data.food = null;
   }
+  
+  // Migration: anciennes données walk (nombre) vers steps, et walk devient booléen
+  if (typeof data.walk === 'number') {
+    data.steps = data.walk;
+    data.walk = data.steps > 0; // Si pas > 0, considère comme validé
+  } else if (data.walk === undefined) {
+    data.walk = false;
+  }
+  
+  // S'assurer que steps existe
+  if (data.steps === undefined) data.steps = 0;
+
+  // Migration: anciennes données sleep string → number
   if (typeof data.sleep === 'string') {
     data.sleep = data.sleep === 'great' ? 8 : data.sleep === 'ok' ? 6 : 4;
   }
@@ -135,12 +157,14 @@ export function getDayScore(day: DayEntry, goal?: number): number {
   let score = 0;
 
   // Activité (30 pts)
-  if (typeof day.walk === 'number' && day.walk > 0) {
-    // Basé sur le nombre de pas : objectif 10 000
-    const stepPct = Math.min(1, day.walk / 10000);
+  const steps = typeof day.walk === 'number' ? day.walk : 0;
+  const isChecked = day.walk === true;
+
+  if (isChecked || steps >= 10000) {
+    score += 30; // Score max si coché ou objectif atteint
+  } else if (steps > 0) {
+    const stepPct = Math.min(1, steps / 10000);
     score += Math.round(stepPct * 30);
-  } else if (day.walk === true) {
-    score += 30;
   }
 
   // Nutrition (30 pts) — calories HealthKit vs objectif

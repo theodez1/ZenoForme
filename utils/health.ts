@@ -38,14 +38,21 @@ const permissions: HealthKitPermissions = {
 
 export const initHealth = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    if (Platform.OS !== 'ios') return resolve();
+    if (Platform.OS !== 'ios') {
+      console.log('[HealthKit] Pas iOS, initialisation ignorée');
+      return resolve();
+    }
 
+    console.log('[HealthKit] Initialisation avec permissions:', permissions);
+    
     AppleHealthKit.initHealthKit(permissions, (error) => {
       if (error) {
         console.log('[HealthKit] Initialization Error: ', error);
         reject(error);
+      } else {
+        console.log('[HealthKit] Initialisation réussie');
+        resolve();
       }
-      resolve();
     });
   });
 };
@@ -73,14 +80,26 @@ export const getTodayCalories = (dateStr?: string): Promise<number> => {
 
 export const getTodaySteps = (dateStr?: string): Promise<number> => {
   return new Promise((resolve) => {
-    if (Platform.OS !== 'ios') return resolve(0);
+    if (Platform.OS !== 'ios') {
+      console.log('[HealthKit] Pas iOS, retourne 0 pas');
+      return resolve(0);
+    }
+    
     const targetDate = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
     const options: HealthInputOptions = {
       date: targetDate.toISOString(),
     };
+    
+    console.log(`[HealthKit] Récupération des pas pour ${dateStr || "aujourd'hui"}...`);
+    
     AppleHealthKit.getStepCount(options, (err, results) => {
-      if (err) return resolve(0);
-      resolve(results.value || 0);
+      if (err) {
+        console.log('[HealthKit] Erreur récupération pas:', err);
+        return resolve(0);
+      }
+      const steps = results.value || 0;
+      console.log(`[HealthKit] Pas récupérés: ${steps}`);
+      resolve(steps);
     });
   });
 };
@@ -126,7 +145,13 @@ export const getRestingHeartRate = (): Promise<number | null> => {
   });
 };
 
-export const getSleepDuration = (dateStr?: string): Promise<number | null> => {
+// Fonction pour obtenir les détails du sommeil par catégorie
+export const getSleepDetails = (dateStr?: string): Promise<{
+  inBed: number;
+  asleep: number;
+  awake: number;
+  total: number;
+} | null> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(null);
 
@@ -142,15 +167,96 @@ export const getSleepDuration = (dateStr?: string): Promise<number | null> => {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     };
+    
     AppleHealthKit.getSleepSamples(options, (err, results) => {
-      if (err || !results.length) return resolve(null);
-      const totalMs = results.reduce((acc, sample) => {
+      if (err || !results.length) {
+        return resolve(null);
+      }
+      
+      // Initialiser les catégories
+      const categories = {
+        inBed: 0,    // IN_BED - temps au lit
+        asleep: 0,    // ASLEEP - temps endormi
+        awake: 0,     // AWAKE - temps réveillé
+      };
+      
+      let totalMs = 0;
+      
+      results.forEach(sample => {
         const start = new Date(sample.startDate).getTime();
         const end = new Date(sample.endDate).getTime();
-        return acc + (end - start);
-      }, 0);
-      resolve(totalMs / (1000 * 60 * 60)); // Hours
+        const duration = end - start;
+        
+        // HealthKit sleep categories
+        switch (typeof sample.value) {
+          case 'number':
+            // Handle numeric values (0, 1, 2)
+            switch (sample.value) {
+              case 0: // inBed
+                categories.inBed += duration;
+                break;
+              case 1: // asleep
+                categories.asleep += duration;
+                break;
+              case 2: // awake
+                categories.awake += duration;
+                break;
+              default:
+                categories.asleep += duration;
+                break;
+            }
+            break;
+          case 'string':
+            // Handle string values
+            switch (sample.value) {
+              case 'IN_BED':
+                categories.inBed += duration;
+                break;
+              case 'ASLEEP':
+                categories.asleep += duration;
+                break;
+              case 'AWAKE':
+                categories.awake += duration;
+                break;
+              default:
+                categories.asleep += duration;
+                break;
+            }
+            break;
+          default:
+            // Fallback: considérer comme asleep par défaut
+            categories.asleep += duration;
+            break;
+        }
+        
+        totalMs += duration;
+      });
+      
+      const result = {
+        inBed: categories.inBed / (1000 * 60 * 60),
+        asleep: categories.asleep / (1000 * 60 * 60),
+        awake: categories.awake / (1000 * 60 * 60),
+        total: totalMs / (1000 * 60 * 60),
+      };
+      
+      console.log(`[HealthKit] Détails sommeil - Au lit: ${result.inBed.toFixed(2)}h, Endormi: ${result.asleep.toFixed(2)}h, Réveillé: ${result.awake.toFixed(2)}h, Total: ${result.total.toFixed(2)}h`);
+      
+      resolve(result);
     });
+  });
+};
+
+export const getSleepDuration = (dateStr?: string): Promise<number | null> => {
+  return new Promise(async (resolve) => {
+    const details = await getSleepDetails(dateStr);
+    if (!details) return resolve(null);
+    
+    // Retourner le temps total de sommeil (asleep + inBed pour le temps total au lit)
+    // ou juste asleep pour le temps de sommeil réel
+    const totalSleep = details.asleep; // Temps de sommeil réel
+    console.log(`[HealthKit] Sommeil total calculé: ${totalSleep.toFixed(2)}h`);
+    
+    resolve(totalSleep);
   });
 };
 

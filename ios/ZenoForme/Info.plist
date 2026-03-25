@@ -30,17 +30,9 @@
           <string>com.theodez.zeno-forme</string>
         </array>
       </dict>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>exp+zeno-forme</string>
-        </array>
-      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>
-    <key>ITSAppUsesNonExemptEncryption</key>
-    <false/>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSAppTransportSecurity</key>
@@ -50,9 +42,7 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
-    <key>NSBluetoothAlwaysUsageDescription</key>
-    <string>Pour se connecter à ta balance Renpho via Bluetooth.</string>
-    <key>NSCameraUsageDescription</key>
+        <key>NSCameraUsageDescription</key>
     <string>Pour prendre ta photo de progression quotidienne.</string>
     <key>NSHealthShareUsageDescription</key>
     <string>L'app utilise vos données Santé pour synchroniser vos calories, votre poids, vos pas, votre rythme cardiaque, votre sommeil, la distance parcourue et d'autres métriques pour vous offrir un tableau de bord complet.</string>

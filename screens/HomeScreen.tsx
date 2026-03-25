@@ -17,7 +17,7 @@ import {
 import { requestPermissions, scheduleAll } from '../utils/notifications';
 import {
   getTodayCalories, getLatestWeight, getTodaySteps,
-  getTodayActiveEnergy, getLatestHeartRate, getSleepDuration,
+  getTodayActiveEnergy, getLatestHeartRate, getSleepDuration, getSleepDetails,
   getLatestBodyFat, logAllHealthData, getMealBreakdown,
   MealBreakdown,
 } from '../utils/health';
@@ -63,15 +63,9 @@ const C = {
 
 // ─── App Header ───────────────────────────────────────────────────────────────
 function AppHeader({
-  activeDate,
-  todayStr,
-  streak,
-  onSelectDate,
+  activeDate, todayStr, streak, onSelectDate,
 }: {
-  activeDate: string;
-  todayStr: string;
-  streak: number;
-  onSelectDate: (date: string) => void;
+  activeDate: string; todayStr: string; streak: number; onSelectDate: (date: string) => void;
 }) {
   const isToday = activeDate === todayStr;
 
@@ -95,14 +89,13 @@ function AppHeader({
   return (
     <View style={h.wrapper}>
       <View style={h.topRow}>
-        <Text style={h.greeting}>Bonjour 👋</Text>
+        <Text style={h.greeting}>Bonjour</Text>
         <View style={h.streakPill}>
           <Ionicons name="flame" size={13} color={C.accent} />
           <Text style={h.streakNum}>{streak}</Text>
           <Text style={h.streakDay}> jours</Text>
         </View>
       </View>
-
       <View style={h.dateRow}>
         <TouchableOpacity style={h.arrow} onPress={() => changeDay(-1)} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={20} color={C.textSub} />
@@ -125,10 +118,7 @@ function AppHeader({
 
 const h = StyleSheet.create({
   wrapper: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 0 },
-  topRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: 14,
-  },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   greeting: { color: C.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   streakPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -146,10 +136,7 @@ const h = StyleSheet.create({
   },
   arrowDisabled: { opacity: 0.2 },
   dateCenter: { flex: 1, alignItems: 'center' },
-  dateLabel: {
-    color: C.text, fontSize: 16, fontWeight: '700',
-    letterSpacing: -0.3, textTransform: 'capitalize',
-  },
+  dateLabel: { color: C.text, fontSize: 16, fontWeight: '700', letterSpacing: -0.3, textTransform: 'capitalize' },
 });
 
 // ─── Score Ring ───────────────────────────────────────────────────────────────
@@ -163,6 +150,54 @@ function ScoreRing({ score }: { score: number }) {
     </View>
   );
 }
+
+// ─── Walk Tile ────────────────────────────────────────────────────────────────
+function WalkTile({ done, onToggle }: { done: boolean; onToggle: () => void }) {
+  return (
+    <TouchableOpacity
+      style={[wt.tile, done && wt.tileDone]}
+      onPress={onToggle}
+      activeOpacity={0.85}
+    >
+      <View style={[wt.iconBox, done && wt.iconBoxDone]}>
+        <Ionicons
+          name={done ? 'checkmark' : 'walk-outline'}
+          size={18}
+          color={done ? '#1a1a00' : C.textSub}
+        />
+      </View>
+      <Text style={[wt.label, done && wt.labelDone]}>
+        {done ? 'Marche validée' : 'Marche du jour'}
+      </Text>
+      <View style={[wt.ring, done && wt.ringDone]}>
+        {done && <Ionicons name="checkmark" size={12} color="#1a1a00" />}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const wt = StyleSheet.create({
+  tile: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: C.card, borderRadius: 18, padding: 16,
+    borderWidth: 1, borderColor: C.border, marginBottom: 12,
+  },
+  tileDone: { backgroundColor: '#E8F97D', borderColor: '#E8F97D' },
+  iconBox: {
+    width: 40, height: 40, borderRadius: 11,
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  iconBoxDone: { backgroundColor: 'rgba(0,0,0,0.1)', borderColor: 'transparent' },
+  label: { flex: 1, color: C.text, fontSize: 15, fontWeight: '600' },
+  labelDone: { color: '#1a1a00' },
+  ring: {
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 1.5, borderColor: C.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ringDone: { backgroundColor: 'rgba(0,0,0,0.18)', borderColor: 'transparent' },
+});
 
 // ─── Nutrition Card ───────────────────────────────────────────────────────────
 function NutritionCard({ data, goal }: { data: MealBreakdown; goal: number }) {
@@ -210,6 +245,7 @@ function NutritionCard({ data, goal }: { data: MealBreakdown; goal: number }) {
     </View>
   );
 }
+
 const nc = StyleSheet.create({
   card: { backgroundColor: C.card, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
@@ -279,6 +315,7 @@ function ActivityCard({ steps, activeEnergy, sleep, heartRate }: {
     </View>
   );
 }
+
 const ac = StyleSheet.create({
   card: { backgroundColor: C.card, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
@@ -326,6 +363,7 @@ function WaterCard({ value, onChange }: { value: number; onChange: (v: number) =
     </View>
   );
 }
+
 const wc = StyleSheet.create({
   card: { backgroundColor: C.card, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
@@ -359,6 +397,7 @@ function NoteCard({ value, onChange }: { value: string; onChange: (t: string) =>
     </View>
   );
 }
+
 const notec = StyleSheet.create({
   card: { backgroundColor: C.card, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
@@ -371,13 +410,9 @@ const notec = StyleSheet.create({
 const PRELOAD_RADIUS = 2;
 
 function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
-  date: string;
-  isActive: boolean;
-  isPreloaded: boolean;
-  goal: number;
-  onUpdate: () => void;
+  date: string; isActive: boolean; isPreloaded: boolean; goal: number; onUpdate: () => void;
 }) {
-  const [entry, setEntry] = useState<DayEntry>({ date, walk: false, food: null, water: 0, sleep: null });
+  const [entry, setEntry] = useState<DayEntry>({ date, walk: false, steps: 0, food: null, water: 0, sleep: null });
   const [note, setNote] = useState('');
   const [mealData, setMealData] = useState<MealBreakdown>({ total: 0, meals: [] });
   const [score, setScore] = useState(0);
@@ -390,24 +425,48 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
   useEffect(() => { noteRef.current = note; }, [note]);
 
   const load = useCallback(async () => {
+    console.log(`[HomeScreen] Chargement des données pour ${date}...`);
     const d = await getDay(date);
-    if (d) { setEntry(d); setNote(d.note || ''); setScore(getDayScore(d, goal)); }
+    if (d) { 
+      setEntry(d); 
+      setNote(d.note || ''); 
+      setScore(getDayScore(d, goal)); 
+      console.log(`[HomeScreen] Données existantes - walk: ${d.walk}, steps: ${d.steps}`);
+    }
+    
+    // Récupérer les détails du sommeil pour voir les 3 catégories
+    const sleepDetails = await getSleepDetails(date);
+    if (sleepDetails) {
+      console.log(`[HomeScreen] Détails sommeil:`);
+      console.log(`  - Au lit (IN_BED): ${sleepDetails.inBed.toFixed(2)}h`);
+      console.log(`  - Endormi (ASLEEP): ${sleepDetails.asleep.toFixed(2)}h`);
+      console.log(`  - Réveillé (AWAKE): ${sleepDetails.awake.toFixed(2)}h`);
+      console.log(`  - Total: ${sleepDetails.total.toFixed(2)}h`);
+    }
+    
     const [hKcal, hSteps, hEnergy, hSleep, hWeight, hFat, hHeart, meals] = await Promise.all([
       getTodayCalories(date), getTodaySteps(date), getTodayActiveEnergy(date),
       getSleepDuration(date), getLatestWeight(), getLatestBodyFat(),
       getLatestHeartRate(), getMealBreakdown(date),
     ]);
+    console.log(`[HomeScreen] Données HealthKit - pas: ${hSteps}, calories: ${hKcal}, sommeil: ${hSleep}h`);
     setMealData(meals);
     const patch: Partial<DayEntry> = {};
-    // Toujours écraser avec la valeur HealthKit pour garder le storage en phase avec l'affichage
     if (hKcal > 0) patch.calories = hKcal;
     if (hWeight && !d?.weight) patch.weight = parseFloat(hWeight.toFixed(1));
-    if (hSteps > 0) patch.walk = hSteps;
     if (hEnergy > 0) patch.activeEnergy = hEnergy;
     if (hHeart) patch.heartRate = hHeart;
     if (hSleep && !d?.sleep) patch.sleep = hSleep;
     if (hFat) patch.bodyFat = hFat;
+    
+    // Mettre à jour les pas HealthKit SANS écraser la validation manuelle
+    if (hSteps !== d?.steps) {
+      patch.steps = hSteps;
+      console.log(`[HomeScreen] Mise à jour des pas: ${d?.steps} → ${hSteps}`);
+    }
+    
     if (Object.keys(patch).length > 0) {
+      console.log(`[HomeScreen] Patch appliqué:`, patch);
       await updateDay(date, patch);
       const next = await getDay(date);
       if (next) { setEntry(next); setScore(getDayScore(next, goal)); }
@@ -415,15 +474,19 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
     setLoaded(true);
   }, [date, goal]);
 
-  // Préchargement silencieux pour les jours voisins
   useEffect(() => {
     if (isPreloaded && !loaded) load();
   }, [isPreloaded, loaded, load]);
 
-  // Rechargement complet à chaque activation (données fraîches)
   useEffect(() => {
     if (isActive) load();
   }, [isActive]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const interval = setInterval(() => { load(); }, 10_000);
+    return () => clearInterval(interval);
+  }, [isActive, load]);
 
   const triggerSave = () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -434,12 +497,17 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
   };
 
   const update = (patch: Partial<DayEntry>) => {
-    setEntry(prev => { const next = { ...prev, ...patch }; setScore(getDayScore(next, goal)); return next; });
+    setEntry(prev => {
+      const next = { ...prev, ...patch };
+      setScore(getDayScore(next, goal));
+      return next;
+    });
     triggerSave();
   };
 
+  const steps = entry.steps || 0;
+
   const scoreColor = score >= 75 ? C.green : score >= 40 ? C.accent : C.red;
-  const steps = typeof entry.walk === 'number' ? entry.walk : 0;
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -457,33 +525,22 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
               <View style={[pg.heroFill, { width: `${score}%`, backgroundColor: scoreColor }]} />
             </View>
             <Text style={[pg.heroSub, { color: scoreColor }]}>
-              {score >= 75 ? 'Journée parfaite 🔥' : score >= 40 ? 'Bonne progression' : 'Commence par une marche'}
+              {score >= 75 ? 'Journée parfaite' : score >= 40 ? 'Bonne progression' : 'Commence par une marche'}
             </Text>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[pg.walkTile, !!entry.walk && pg.walkTileActive]}
-          onPress={() => {
+        <WalkTile
+          done={entry.walk}
+          onToggle={async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            update({ walk: typeof entry.walk === 'number' && entry.walk > 0 ? false : !entry.walk });
+
+            // Toggle la validation manuelle de la marche
+            const nextValue = !entry.walk;
+
+            update({ walk: nextValue });
           }}
-          activeOpacity={0.8}
-        >
-          <View style={[pg.walkIcon, !!entry.walk && pg.walkIconActive]}>
-            <Ionicons name={entry.walk ? 'checkmark' : 'walk-outline'} size={18} color={!!entry.walk ? '#000' : C.textSub} />
-          </View>
-          <View>
-            <Text style={[pg.walkLabel, !!entry.walk && { color: '#000' }]}>
-              {typeof entry.walk === 'number' && entry.walk > 0
-                ? `${entry.walk.toLocaleString()} pas`
-                : 'Marche / Sport'}
-            </Text>
-            <Text style={[pg.walkSub, !!entry.walk && { color: 'rgba(0,0,0,0.5)' }]}>
-              {entry.walk ? 'Activité validée' : 'Appuie pour valider'}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        />
 
         <NutritionCard data={mealData} goal={goal} />
         <ActivityCard
@@ -506,12 +563,6 @@ const pg = StyleSheet.create({
   heroBg: { height: 5, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
   heroFill: { height: '100%', borderRadius: 3 },
   heroSub: { fontSize: 12, fontWeight: '600' },
-  walkTile: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.card, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border },
-  walkTileActive: { backgroundColor: C.accent, borderColor: C.accent },
-  walkIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
-  walkIconActive: { backgroundColor: 'rgba(0,0,0,0.15)' },
-  walkLabel: { color: C.text, fontSize: 15, fontWeight: '700' },
-  walkSub: { color: C.textSub, fontSize: 11, fontWeight: '500', marginTop: 2 },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -571,7 +622,6 @@ export default function HomeScreen() {
         streak={streak}
         onSelectDate={onSelectDate}
       />
-
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
