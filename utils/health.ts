@@ -145,11 +145,11 @@ export const getRestingHeartRate = (): Promise<number | null> => {
   });
 };
 
-// Fonction pour obtenir les détails du sommeil par catégorie
+// Fonction pour obtenir les détails du sommeil par stade Apple HealthKit
 export const getSleepDetails = (dateStr?: string): Promise<{
-  inBed: number;
-  asleep: number;
-  awake: number;
+  rem: number;
+  core: number;
+  deep: number;
   total: number;
 } | null> => {
   return new Promise((resolve) => {
@@ -173,11 +173,17 @@ export const getSleepDetails = (dateStr?: string): Promise<{
         return resolve(null);
       }
       
-      // Initialiser les catégories
-      const categories = {
-        inBed: 0,    // IN_BED - temps au lit
-        asleep: 0,    // ASLEEP - temps endormi
-        awake: 0,     // AWAKE - temps réveillé
+      // Garder uniquement ces 3 valeurs de sommeil Apple HealthKit
+      // HKCategoryValueSleepAnalysis.asleepREM.rawValue = 5
+      // HKCategoryValueSleepAnalysis.asleepCore.rawValue = 3  
+      // HKCategoryValueSleepAnalysis.asleepDeep.rawValue = 4
+      const validSleepValues = [3, 4, 5]; // Core, Deep, REM
+      
+      // Initialiser les stades de sommeil
+      const sleepStages = {
+        rem: 0,    // REM (5)
+        core: 0,    // Core (3)
+        deep: 0,    // Deep (4)
       };
       
       let totalMs = 0;
@@ -187,59 +193,33 @@ export const getSleepDetails = (dateStr?: string): Promise<{
         const end = new Date(sample.endDate).getTime();
         const duration = end - start;
         
-        // HealthKit sleep categories
-        switch (typeof sample.value) {
-          case 'number':
-            // Handle numeric values (0, 1, 2)
-            switch (sample.value) {
-              case 0: // inBed
-                categories.inBed += duration;
-                break;
-              case 1: // asleep
-                categories.asleep += duration;
-                break;
-              case 2: // awake
-                categories.awake += duration;
-                break;
-              default:
-                categories.asleep += duration;
-                break;
-            }
-            break;
-          case 'string':
-            // Handle string values
-            switch (sample.value) {
-              case 'IN_BED':
-                categories.inBed += duration;
-                break;
-              case 'ASLEEP':
-                categories.asleep += duration;
-                break;
-              case 'AWAKE':
-                categories.awake += duration;
-                break;
-              default:
-                categories.asleep += duration;
-                break;
-            }
-            break;
-          default:
-            // Fallback: considérer comme asleep par défaut
-            categories.asleep += duration;
-            break;
+        // Filtrer uniquement les 3 stades de sommeil valides
+        if (validSleepValues.includes(sample.value)) {
+          switch (sample.value) {
+            case 3: // Core
+              sleepStages.core += duration;
+              break;
+            case 4: // Deep
+              sleepStages.deep += duration;
+              break;
+            case 5: // REM
+              sleepStages.rem += duration;
+              break;
+          }
+          totalMs += duration;
+          
+          console.log(`[HealthKit] Stade sommeil: ${sample.value === 3 ? 'Core' : sample.value === 4 ? 'Deep' : 'REM'}, durée: ${(duration / (1000 * 60 * 60)).toFixed(2)}h`);
         }
-        
-        totalMs += duration;
       });
       
       const result = {
-        inBed: categories.inBed / (1000 * 60 * 60),
-        asleep: categories.asleep / (1000 * 60 * 60),
-        awake: categories.awake / (1000 * 60 * 60),
+        rem: sleepStages.rem / (1000 * 60 * 60),
+        core: sleepStages.core / (1000 * 60 * 60),
+        deep: sleepStages.deep / (1000 * 60 * 60),
         total: totalMs / (1000 * 60 * 60),
       };
       
-      console.log(`[HealthKit] Détails sommeil - Au lit: ${result.inBed.toFixed(2)}h, Endormi: ${result.asleep.toFixed(2)}h, Réveillé: ${result.awake.toFixed(2)}h, Total: ${result.total.toFixed(2)}h`);
+      console.log(`[HealthKit] Stades sommeil - Core: ${result.core.toFixed(2)}h, Deep: ${result.deep.toFixed(2)}h, REM: ${result.rem.toFixed(2)}h, Total: ${result.total.toFixed(2)}h`);
       
       resolve(result);
     });
@@ -251,9 +231,8 @@ export const getSleepDuration = (dateStr?: string): Promise<number | null> => {
     const details = await getSleepDetails(dateStr);
     if (!details) return resolve(null);
     
-    // Retourner le temps total de sommeil (asleep + inBed pour le temps total au lit)
-    // ou juste asleep pour le temps de sommeil réel
-    const totalSleep = details.asleep; // Temps de sommeil réel
+    // Retourner le temps total de sommeil (Core + Deep + REM)
+    const totalSleep = details.total; // Temps total des 3 stades
     console.log(`[HealthKit] Sommeil total calculé: ${totalSleep.toFixed(2)}h`);
     
     resolve(totalSleep);

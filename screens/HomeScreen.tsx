@@ -434,13 +434,13 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
       console.log(`[HomeScreen] Données existantes - walk: ${d.walk}, steps: ${d.steps}`);
     }
     
-    // Récupérer les détails du sommeil pour voir les 3 catégories
+    // Récupérer les détails du sommeil pour voir les 3 stades
     const sleepDetails = await getSleepDetails(date);
     if (sleepDetails) {
-      console.log(`[HomeScreen] Détails sommeil:`);
-      console.log(`  - Au lit (IN_BED): ${sleepDetails.inBed.toFixed(2)}h`);
-      console.log(`  - Endormi (ASLEEP): ${sleepDetails.asleep.toFixed(2)}h`);
-      console.log(`  - Réveillé (AWAKE): ${sleepDetails.awake.toFixed(2)}h`);
+      console.log(`[HomeScreen] Stades sommeil:`);
+      console.log(`  - Core: ${sleepDetails.core.toFixed(2)}h`);
+      console.log(`  - Deep: ${sleepDetails.deep.toFixed(2)}h`);
+      console.log(`  - REM: ${sleepDetails.rem.toFixed(2)}h`);
       console.log(`  - Total: ${sleepDetails.total.toFixed(2)}h`);
     }
     
