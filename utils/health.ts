@@ -168,16 +168,38 @@ export const getSleepDetails = (dateStr?: string): Promise<{
       endDate: endDate.toISOString(),
     };
     
+    console.log(`[HealthKit] Récupération du sommeil pour ${dateStr || "aujourd'hui"}...`);
+    console.log(`[HealthKit] Plage de dates: ${startDate.toISOString()} → ${endDate.toISOString()}`);
+    
     AppleHealthKit.getSleepSamples(options, (err, results) => {
-      if (err || !results.length) {
+      if (err) {
+        console.log(`[HealthKit] Erreur récupération sommeil:`, err);
         return resolve(null);
       }
+      
+      console.log(`[HealthKit] Nombre d'échantillons bruts reçus: ${results?.length || 0}`);
+      
+      if (!results || !results.length) {
+        console.log(`[HealthKit] Aucun échantillon de sommeil trouvé`);
+        return resolve(null);
+      }
+      
+      // Log de tous les échantillons bruts pour diagnostic
+      console.log(`[HealthKit] === ÉCHANTILLONS BRUTS ===`);
+      results.forEach((sample, index) => {
+        const start = new Date(sample.startDate).getTime();
+        const end = new Date(sample.endDate).getTime();
+        const duration = end - start;
+        console.log(`[HealthKit] Sample ${index}: value=${sample.value}, type=${typeof sample.value}, start=${sample.startDate}, end=${sample.endDate}, duration=${(duration/3600000).toFixed(2)}h`);
+      });
       
       // Garder uniquement ces 3 valeurs de sommeil Apple HealthKit
       // HKCategoryValueSleepAnalysis.asleepREM.rawValue = 5
       // HKCategoryValueSleepAnalysis.asleepCore.rawValue = 3  
       // HKCategoryValueSleepAnalysis.asleepDeep.rawValue = 4
       const validSleepValues = [3, 4, 5]; // Core, Deep, REM
+      
+      console.log(`[HealthKit] Valeurs de sommeil valides recherchées: [${validSleepValues.join(', ')}]`);
       
       // Initialiser les stades de sommeil
       const sleepStages = {
@@ -187,6 +209,7 @@ export const getSleepDetails = (dateStr?: string): Promise<{
       };
       
       let totalMs = 0;
+      let matchedCount = 0;
       
       results.forEach(sample => {
         const start = new Date(sample.startDate).getTime();
@@ -194,7 +217,11 @@ export const getSleepDetails = (dateStr?: string): Promise<{
         const duration = end - start;
         
         // Filtrer uniquement les 3 stades de sommeil valides
-        if (validSleepValues.includes(sample.value)) {
+        const isValid = validSleepValues.includes(sample.value);
+        console.log(`[HealthKit] Traitement sample: value=${sample.value}, valid=${isValid}`);
+        
+        if (isValid) {
+          matchedCount++;
           switch (sample.value) {
             case 3: // Core
               sleepStages.core += duration;
@@ -208,9 +235,11 @@ export const getSleepDetails = (dateStr?: string): Promise<{
           }
           totalMs += duration;
           
-          console.log(`[HealthKit] Stade sommeil: ${sample.value === 3 ? 'Core' : sample.value === 4 ? 'Deep' : 'REM'}, durée: ${(duration / (1000 * 60 * 60)).toFixed(2)}h`);
+          console.log(`[HealthKit] ✓ Stade sommeil matché: ${sample.value === 3 ? 'Core' : sample.value === 4 ? 'Deep' : 'REM'}, durée: ${(duration / (1000 * 60 * 60)).toFixed(2)}h`);
         }
       });
+      
+      console.log(`[HealthKit] Nombre d'échantillons matchés: ${matchedCount}/${results.length}`);
       
       const result = {
         rem: sleepStages.rem / (1000 * 60 * 60),
@@ -219,7 +248,7 @@ export const getSleepDetails = (dateStr?: string): Promise<{
         total: totalMs / (1000 * 60 * 60),
       };
       
-      console.log(`[HealthKit] Stades sommeil - Core: ${result.core.toFixed(2)}h, Deep: ${result.deep.toFixed(2)}h, REM: ${result.rem.toFixed(2)}h, Total: ${result.total.toFixed(2)}h`);
+      console.log(`[HealthKit] RÉSULTAT FINAL - Core: ${result.core.toFixed(2)}h, Deep: ${result.deep.toFixed(2)}h, REM: ${result.rem.toFixed(2)}h, Total: ${result.total.toFixed(2)}h`);
       
       resolve(result);
     });

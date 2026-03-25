@@ -61,6 +61,7 @@ function TabNavigator() {
           else if (route.name === 'Poids') iconName = focused ? 'trending-up' : 'trending-up-outline';
           else if (route.name === 'Photos') iconName = focused ? 'camera' : 'camera-outline';
           else if (route.name === 'Bilan') iconName = focused ? 'calendar' : 'calendar-outline';
+          else if (route.name === 'Sommeil') iconName = focused ? 'moon' : 'moon-outline';
           return <Ionicons name={iconName} size={22} color={color} />;
         },
       })}
@@ -68,6 +69,7 @@ function TabNavigator() {
       <Tab.Screen name="Moi" component={HomeScreen} />
       <Tab.Screen name="Poids" component={EvolutionScreen} />
       <Tab.Screen name="Photos" component={PhotosScreen} />
+      <Tab.Screen name="Sommeil" component={SleepScreen} />
       <Tab.Screen name="Bilan" component={HistoryScreen} />
     </Tab.Navigator>
   );

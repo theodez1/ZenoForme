@@ -21,7 +21,6 @@ import {
   getLatestBodyFat, logAllHealthData, getMealBreakdown,
   MealBreakdown,
 } from '../utils/health';
-import SleepTile from '../components/SleepTile';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -542,8 +541,6 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
             update({ walk: nextValue });
           }}
         />
-
-        <SleepTile />
 
         <NutritionCard data={mealData} goal={goal} />
         <ActivityCard
