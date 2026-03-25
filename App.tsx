@@ -13,6 +13,7 @@ import HistoryScreen from './screens/HistoryScreen';
 import EvolutionScreen from './screens/EvolutionScreen';
 import PhotosScreen from './screens/PhotosScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import SleepScreen from './screens/SleepScreen';
 import { initHealth } from './utils/health';
 
 const Tab = createBottomTabNavigator();
@@ -79,6 +80,11 @@ function AppNavigator() {
       <Stack.Screen 
         name="Profile" 
         component={ProfileScreen} 
+        options={{ animation: 'slide_from_right' }} 
+      />
+      <Stack.Screen 
+        name="Sleep" 
+        component={SleepScreen} 
         options={{ animation: 'slide_from_right' }} 
       />
     </Stack.Navigator>
