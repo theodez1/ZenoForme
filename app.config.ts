@@ -23,7 +23,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-build-properties",
       {
         "ios": {
-          "deploymentTarget": "15.1"
+          "deploymentTarget": "15.1",
+          "aps-environment": "production"
         }
       }
     ]
@@ -31,7 +32,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.theodez.zeno-forme",
-    buildNumber: "5",
+    buildNumber: "7",
     entitlements: {
       "com.apple.developer.healthkit": true
     },
@@ -40,6 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSPhotoLibraryUsageDescription: "Pour choisir une photo depuis ta galerie.",
       NSHealthShareUsageDescription: "L'app utilise vos données Santé pour synchroniser vos calories, votre poids, vos pas, votre rythme cardiaque, votre sommeil, la distance parcourue et d'autres métriques pour vous offrir un tableau de bord complet.",
       NSHealthUpdateUsageDescription: "L'app peut enregistrer vos calories et votre poids dans Santé pour les synchroniser avec vos autres applications comme Yazio ou Renpho.",
+      NSPhotoLibraryAddUsageDescription: "Allow $(PRODUCT_NAME) to save photos",
       ITSAppUsesNonExemptEncryption: false
     }
   },

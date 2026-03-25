@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { getProfile, updateProfile, UserProfile, getDay, todayString, getAllDays, updateDay } from '../utils/storage';
+import { getProfile, updateProfile, UserProfile, getDay, todayString, getAllDays, updateDay, getDayScoreBreakdown, ScoreBreakdown } from '../utils/storage';
 import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -279,7 +279,82 @@ const dash = StyleSheet.create({
   statVal: { color: C.text, fontSize: 16, fontWeight: '800' },
 });
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+// ─── Score Breakdown Card ───────────────────────────────────────────────────
+function ScoreBreakdownCard({ breakdown, calorieGoal }: { breakdown: ScoreBreakdown; calorieGoal: number }) {
+  const categories = [
+    { key: 'activity', label: 'Activité', icon: 'walk-outline', color: C.blue },
+    { key: 'nutrition', label: 'Nutrition', icon: 'nutrition-outline', color: C.orange },
+    { key: 'hydration', label: 'Hydratation', icon: 'water-outline', color: C.accent },
+    { key: 'sleep', label: 'Sommeil', icon: 'moon-outline', color: C.green },
+  ] as const;
+
+  return (
+    <View style={sb.root}>
+      <BlurView tint="dark" intensity={10} style={sb.glass}>
+        <View style={sb.header}>
+          <Text style={sb.title}>Score du jour</Text>
+          <View style={sb.totalBadge}>
+            <Text style={sb.totalVal}>{breakdown.total}</Text>
+            <Text style={sb.totalLabel}>/ 100</Text>
+          </View>
+        </View>
+
+        <View style={sb.categories}>
+          {categories.map(cat => {
+            const data = breakdown[cat.key];
+            return (
+              <View key={cat.key} style={sb.row}>
+                <View style={sb.iconBox}>
+                  <Ionicons name={cat.icon as any} size={14} color={cat.color} />
+                </View>
+                <View style={sb.info}>
+                  <View style={sb.labelRow}>
+                    <Text style={sb.label}>{cat.label}</Text>
+                    <Text style={[sb.points, { color: data.points > 0 ? cat.color : C.textMuted }]}>
+                      {data.points}/{data.max}
+                    </Text>
+                  </View>
+                  <Text style={sb.detail}>{data.detail}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {breakdown.nutrition.points > 0 && (
+          <View style={sb.calorieJustify}>
+            <Ionicons name="information-circle-outline" size={12} color={C.textSub} />
+            <Text style={sb.calorieText}>
+              Objectif: {calorieGoal} kcal • Consommé: {breakdown.nutrition.detail}
+            </Text>
+          </View>
+        )}
+      </BlurView>
+    </View>
+  );
+}
+
+const sb = StyleSheet.create({
+  root: { marginBottom: 24, overflow: 'hidden', borderRadius: 24, borderWidth: 1, borderColor: C.border },
+  glass: { padding: 18, backgroundColor: 'rgba(255,255,255,0.02)' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  title: { color: C.textSub, fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  totalBadge: { flexDirection: 'row', alignItems: 'baseline', backgroundColor: C.surface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: C.border },
+  totalVal: { color: C.accent, fontSize: 18, fontWeight: '900' },
+  totalLabel: { color: C.textMuted, fontSize: 11, fontWeight: '600', marginLeft: 2 },
+
+  categories: { gap: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBox: { width: 32, height: 32, borderRadius: 10, backgroundColor: C.cardAlt, alignItems: 'center', justifyContent: 'center' },
+  info: { flex: 1 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  label: { color: C.text, fontSize: 13, fontWeight: '700' },
+  points: { fontSize: 13, fontWeight: '800' },
+  detail: { color: C.textMuted, fontSize: 11, fontWeight: '500', marginTop: 2 },
+
+  calorieJustify: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border },
+  calorieText: { color: C.textSub, fontSize: 11, fontWeight: '500', flex: 1 },
+});
 export default function ProfileScreen({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets();
   const [saved, setSaved] = useState(false);
@@ -292,6 +367,9 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   const [activity, setActivity] = useState(1.2);
   const [deficit, setDeficit] = useState<'light' | 'standard' | 'intense'>('standard');
   const [goalWeight, setGoalWeight] = useState('');
+  const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown | null>(null);
+  const [todayEntry, setTodayEntry] = useState<any>(null);
+  const [calorieGoal, setCalorieGoal] = useState<number>(2000);
 
   useFocusEffect(useCallback(() => {
     const load = async () => {
@@ -306,9 +384,26 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
         if (p.goal) setGoalWeight(p.goal.toString());
       }
 
-      if (today?.weight) {
-        setWeight(today.weight.toFixed(1));
-        setIsWeightSynced(true);
+      // Calculate today's calorie goal
+      const h = p?.height || 175;
+      const a = p?.age || 30;
+      const w = today?.weight || 75;
+      const act = p?.activityFactor || 1.2;
+      const bmr = p?.gender === 'female'
+        ? 10 * w + 6.25 * h - 5 * a - 161
+        : 10 * w + 6.25 * h - 5 * a + 5;
+      const tdee = Math.round(bmr * act);
+      const deficitKcal = p?.deficitType === 'light' ? 250 : p?.deficitType === 'intense' ? 750 : 500;
+      const calorieGoal = Math.max(p?.gender === 'female' ? 1200 : 1500, tdee - deficitKcal);
+      setCalorieGoal(calorieGoal);
+
+      if (today) {
+        setTodayEntry(today);
+        setScoreBreakdown(getDayScoreBreakdown(today, calorieGoal));
+        if (today.weight) {
+          setWeight(today.weight.toFixed(1));
+          setIsWeightSynced(true);
+        }
       } else {
         // Find last known weight if not today
         const all = await getAllDays();
@@ -361,6 +456,10 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
             height={height} weight={weight} age={age}
             gender={gender} activity={activity} deficit={deficit}
           />
+
+          {scoreBreakdown && (
+            <ScoreBreakdownCard breakdown={scoreBreakdown} calorieGoal={calorieGoal} />
+          )}
 
           {/* Section: Genre */}
           <View style={{ marginBottom: 24 }}>

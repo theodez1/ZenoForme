@@ -31,8 +31,8 @@ const C = {
   accent: '#E8F97D',
   accentDim: 'rgba(232,249,125,0.10)',
   text: '#F2F2F2',
-  textSub: '#666',
-  textMuted: '#333',
+  textSub: '#888',
+  textMuted: '#444',
   green: '#34d399',
   greenDim: 'rgba(52,211,153,0.10)',
   red: '#f87171',
@@ -44,6 +44,22 @@ const C = {
   orange: '#fb923c',
   orangeDim: 'rgba(251,146,60,0.10)',
 };
+
+// ─── Shared Header Component ──────────────────────────────────────────────────
+function ScreenHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <View style={headerStyles.container}>
+      <Text style={headerStyles.title}>{title}</Text>
+      {subtitle && <Text style={headerStyles.subtitle}>{subtitle}</Text>}
+    </View>
+  );
+}
+
+const headerStyles = StyleSheet.create({
+  container: { paddingTop: 16, marginBottom: 20 },
+  title: { color: C.text, fontSize: 30, fontWeight: '900', letterSpacing: -1 },
+  subtitle: { color: C.textSub, fontSize: 13, fontWeight: '500', marginTop: 4 },
+});
 
 type DataPoint = { date: string; value: number };
 
@@ -422,17 +438,16 @@ export default function EvolutionScreen() {
   const wMax = wVals.length ? Math.max(...wVals) : null;
   const wAvg = wVals.length ? wVals.reduce((a, b) => a + b, 0) / wVals.length : null;
 
+  // Perte de poids: max - actuel (toujours positif si on a perdu)
+  const weightLoss = (wMax && currentW) ? wMax - currentW : null;
+
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header ── */}
-        <View style={s.header}>
-          <Text style={s.heading}>Évolution</Text>
-          <Text style={s.subheading}>Composition corporelle</Text>
-        </View>
+        <ScreenHeader title="Évolution" subtitle="Composition corporelle" />
 
         {/* ── Period Picker ── */}
         <View style={s.periodRow}>
@@ -468,8 +483,12 @@ export default function EvolutionScreen() {
           {/* Stats row sous le graphe */}
           {wMin && wMax && wAvg ? (
             <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: C.border }}>
-              <StatRow label="Minimum" value={wMin.toFixed(1)} unit="kg" color={C.green} />
               <StatRow label="Maximum" value={wMax.toFixed(1)} unit="kg" color={C.red} />
+              <StatRow label="Actuel" value={currentW?.toFixed(1)} unit="kg" color={C.accent} />
+              {weightLoss !== null && weightLoss > 0 && (
+                <StatRow label="Perte" value={`-${weightLoss.toFixed(1)}`} unit="kg" color={C.green} />
+              )}
+              <StatRow label="Minimum" value={wMin.toFixed(1)} unit="kg" color={C.green} />
               <StatRow label="Moyenne" value={wAvg.toFixed(1)} unit="kg" color={C.textSub} />
             </View>
           ) : null}
@@ -554,10 +573,6 @@ export default function EvolutionScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   scroll: { paddingHorizontal: 20, paddingBottom: 20 },
-
-  header: { paddingTop: 16, marginBottom: 20 },
-  heading: { color: C.text, fontSize: 30, fontWeight: '900', letterSpacing: -1 },
-  subheading: { color: C.textSub, fontSize: 13, fontWeight: '500', marginTop: 3 },
 
   periodRow: {
     flexDirection: 'row', gap: 8, marginBottom: 20,

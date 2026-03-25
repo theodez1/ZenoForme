@@ -48,8 +48,6 @@
     <string>L'app utilise vos données Santé pour synchroniser vos calories, votre poids, vos pas, votre rythme cardiaque, votre sommeil, la distance parcourue et d'autres métriques pour vous offrir un tableau de bord complet.</string>
     <key>NSHealthUpdateUsageDescription</key>
     <string>L'app peut enregistrer vos calories et votre poids dans Santé pour les synchroniser avec vos autres applications comme Yazio ou Renpho.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your microphone</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to save photos</string>
     <key>NSPhotoLibraryUsageDescription</key>

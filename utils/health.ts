@@ -36,27 +36,41 @@ const permissions: HealthKitPermissions = {
   },
 };
 
+// ─── Mapping des stades de sommeil ────────────────────────────────────────────
+// react-native-health retourne les valeurs sous forme de STRING (pas de number)
+// Valeurs possibles : 'INBED', 'AWAKE', 'CORE', 'DEEP', 'REM'
+const SLEEP_STAGE_STRINGS = {
+  CORE: 'CORE',
+  DEEP: 'DEEP',
+  REM:  'REM',
+  AWAKE: 'AWAKE',
+} as const;
+
+const VALID_SLEEP_STAGES = [
+  SLEEP_STAGE_STRINGS.CORE,
+  SLEEP_STAGE_STRINGS.DEEP,
+  SLEEP_STAGE_STRINGS.REM,
+  SLEEP_STAGE_STRINGS.AWAKE,
+];
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
 export const initHealth = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (Platform.OS !== 'ios') {
-      console.log('[HealthKit] Pas iOS, initialisation ignorée');
       return resolve();
     }
 
-    console.log('[HealthKit] Initialisation avec permissions:', permissions);
-    
     AppleHealthKit.initHealthKit(permissions, (error) => {
       if (error) {
-        console.log('[HealthKit] Initialization Error: ', error);
         reject(error);
       } else {
-        console.log('[HealthKit] Initialisation réussie');
         resolve();
       }
     });
   });
 };
 
+// ─── Calories consommées ──────────────────────────────────────────────────────
 export const getTodayCalories = (dateStr?: string): Promise<number> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(0);
@@ -78,32 +92,29 @@ export const getTodayCalories = (dateStr?: string): Promise<number> => {
   });
 };
 
+// ─── Pas ──────────────────────────────────────────────────────────────────────
 export const getTodaySteps = (dateStr?: string): Promise<number> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') {
-      console.log('[HealthKit] Pas iOS, retourne 0 pas');
       return resolve(0);
     }
-    
+
     const targetDate = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
     const options: HealthInputOptions = {
       date: targetDate.toISOString(),
     };
-    
-    console.log(`[HealthKit] Récupération des pas pour ${dateStr || "aujourd'hui"}...`);
-    
+
     AppleHealthKit.getStepCount(options, (err, results) => {
       if (err) {
-        console.log('[HealthKit] Erreur récupération pas:', err);
         return resolve(0);
       }
       const steps = results.value || 0;
-      console.log(`[HealthKit] Pas récupérés: ${steps}`);
       resolve(steps);
     });
   });
 };
 
+// ─── Énergie active ───────────────────────────────────────────────────────────
 export const getTodayActiveEnergy = (dateStr?: string): Promise<number> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(0);
@@ -125,6 +136,7 @@ export const getTodayActiveEnergy = (dateStr?: string): Promise<number> => {
   });
 };
 
+// ─── Fréquence cardiaque ──────────────────────────────────────────────────────
 export const getLatestHeartRate = (): Promise<number | null> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(null);
@@ -145,111 +157,147 @@ export const getRestingHeartRate = (): Promise<number | null> => {
   });
 };
 
-// Fonction pour obtenir les détails du sommeil par stade Apple HealthKit
+// ─── Sommeil ──────────────────────────────────────────────────────────────────
+// IMPORTANT : react-native-health retourne sample.value sous forme de STRING
+// ('INBED', 'AWAKE', 'CORE', 'DEEP', 'REM') et NON pas les rawValues iOS (0, 2, 3, 4, 5)
 export const getSleepDetails = (dateStr?: string): Promise<{
   rem: number;
   core: number;
   deep: number;
+  awake: number;
   total: number;
+  samples: { stage: string; startDate: string; endDate: string }[];
 } | null> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(null);
 
-    // For sleep, we usually want "last night" (from evening before to today)
     const targetDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
     const startDate = new Date(targetDate);
     startDate.setDate(startDate.getDate() - 1);
-    startDate.setHours(18, 0, 0, 0); // Start from 6 PM yesterday
+    startDate.setHours(18, 0, 0, 0); // Depuis 18h la veille
     const endDate = new Date(targetDate);
-    endDate.setHours(12, 0, 0, 0); // To 12 PM today
+    endDate.setHours(12, 0, 0, 0);   // Jusqu'à 12h le jour J
 
     const options: HealthInputOptions = {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     };
-    
-    console.log(`[HealthKit] Récupération du sommeil pour ${dateStr || "aujourd'hui"}...`);
-    console.log(`[HealthKit] Plage de dates: ${startDate.toISOString()} → ${endDate.toISOString()}`);
-    
+
     AppleHealthKit.getSleepSamples(options, (err, results) => {
       if (err) {
-        console.log(`[HealthKit] Erreur récupération sommeil:`, err);
         return resolve(null);
       }
-      
-      console.log(`[HealthKit] Nombre d'échantillons bruts reçus: ${results?.length || 0}`);
-      
+
       if (!results || !results.length) {
-        console.log(`[HealthKit] Aucun échantillon de sommeil trouvé`);
         return resolve(null);
       }
-      
-      // Log de tous les échantillons bruts pour diagnostic
-      console.log(`[HealthKit] === ÉCHANTILLONS BRUTS ===`);
-      results.forEach((sample, index) => {
-        const start = new Date(sample.startDate).getTime();
-        const end = new Date(sample.endDate).getTime();
-        const duration = end - start;
-        console.log(`[HealthKit] Sample ${index}: value=${sample.value}, type=${typeof sample.value}, start=${sample.startDate}, end=${sample.endDate}, duration=${(duration/3600000).toFixed(2)}h`);
-      });
-      
-      // Garder uniquement ces 3 valeurs de sommeil Apple HealthKit
-      // HKCategoryValueSleepAnalysis.asleepREM.rawValue = 5
-      // HKCategoryValueSleepAnalysis.asleepCore.rawValue = 3  
-      // HKCategoryValueSleepAnalysis.asleepDeep.rawValue = 4
-      const validSleepValues = [3, 4, 5]; // Core, Deep, REM
-      
-      console.log(`[HealthKit] Valeurs de sommeil valides recherchées: [${validSleepValues.join(', ')}]`);
-      
-      // Initialiser les stades de sommeil
-      const sleepStages = {
-        rem: 0,    // REM (5)
-        core: 0,    // Core (3)
-        deep: 0,    // Deep (4)
-      };
-      
-      let totalMs = 0;
+
+      let coreMs = 0;
+      let deepMs = 0;
+      let remMs  = 0;
+      let awakeMs = 0;
       let matchedCount = 0;
-      
-      results.forEach(sample => {
+
+      results.forEach((sample) => {
+        const valueStr = String(sample.value).toUpperCase().trim();
+        const isValid = VALID_SLEEP_STAGES.includes(valueStr as any);
+
+        if (!isValid) return;
+
         const start = new Date(sample.startDate).getTime();
-        const end = new Date(sample.endDate).getTime();
-        const duration = end - start;
-        
-        // Filtrer uniquement les 3 stades de sommeil valides
-        const isValid = validSleepValues.includes(sample.value);
-        console.log(`[HealthKit] Traitement sample: value=${sample.value}, valid=${isValid}`);
-        
-        if (isValid) {
-          matchedCount++;
-          switch (sample.value) {
-            case 3: // Core
-              sleepStages.core += duration;
-              break;
-            case 4: // Deep
-              sleepStages.deep += duration;
-              break;
-            case 5: // REM
-              sleepStages.rem += duration;
-              break;
-          }
-          totalMs += duration;
-          
-          console.log(`[HealthKit] ✓ Stade sommeil matché: ${sample.value === 3 ? 'Core' : sample.value === 4 ? 'Deep' : 'REM'}, durée: ${(duration / (1000 * 60 * 60)).toFixed(2)}h`);
+        const end   = new Date(sample.endDate).getTime();
+        const durationMs = end - start;
+
+        matchedCount++;
+
+        switch (valueStr) {
+          case SLEEP_STAGE_STRINGS.CORE:
+            coreMs += durationMs;
+            break;
+          case SLEEP_STAGE_STRINGS.DEEP:
+            deepMs += durationMs;
+            break;
+          case SLEEP_STAGE_STRINGS.REM:
+            remMs += durationMs;
+            break;
+          case SLEEP_STAGE_STRINGS.AWAKE:
+            awakeMs += durationMs;
+            break;
         }
       });
-      
-      console.log(`[HealthKit] Nombre d'échantillons matchés: ${matchedCount}/${results.length}`);
-      
+
+      // 🐛 FIX : Déduplication des échantillons (certains jours ont des doublons HealthKit)
+      const seen = new Set<string>();
+      const uniqueSamples = results.filter((sample: any) => {
+        const key = `${sample.startDate}|${sample.endDate}|${sample.value}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      // Reset et recalcule avec les échantillons dédupliqués
+      coreMs = 0;
+      deepMs = 0;
+      remMs = 0;
+      awakeMs = 0;
+      matchedCount = 0;
+
+      uniqueSamples.forEach((sample: any) => {
+        const valueStr = String(sample.value).toUpperCase().trim();
+        if (!VALID_SLEEP_STAGES.includes(valueStr as any)) return;
+
+        const start = new Date(sample.startDate).getTime();
+        const end = new Date(sample.endDate).getTime();
+        const durationMs = end - start;
+
+        matchedCount++;
+
+        switch (valueStr) {
+          case SLEEP_STAGE_STRINGS.CORE:
+            coreMs += durationMs;
+            break;
+          case SLEEP_STAGE_STRINGS.DEEP:
+            deepMs += durationMs;
+            break;
+          case SLEEP_STAGE_STRINGS.REM:
+            remMs += durationMs;
+            break;
+          case SLEEP_STAGE_STRINGS.AWAKE:
+            awakeMs += durationMs;
+            break;
+        }
+      });
+
+      const MS_TO_HOURS = 1 / 3600000;
+
+      // Convertir les échantillons pour le composant SleepStagesChart
+      const samples = uniqueSamples
+        .filter((s: any) => VALID_SLEEP_STAGES.includes(String(s.value).toUpperCase().trim() as any))
+        .map((s: any) => ({
+          stage: String(s.value).toUpperCase().trim() as 'awake' | 'rem' | 'light' | 'deep',
+          startDate: s.startDate,
+          endDate: s.endDate,
+        }))
+        // Mapper CORE vers 'light' car SleepStagesChart utilise la nomenclature standard
+        .map((s: any) => ({
+          ...s,
+          stage: s.stage === 'CORE' ? 'light' : s.stage.toLowerCase()
+        }));
+
       const result = {
-        rem: sleepStages.rem / (1000 * 60 * 60),
-        core: sleepStages.core / (1000 * 60 * 60),
-        deep: sleepStages.deep / (1000 * 60 * 60),
-        total: totalMs / (1000 * 60 * 60),
+        core:  coreMs * MS_TO_HOURS,
+        deep:  deepMs * MS_TO_HOURS,
+        rem:   remMs  * MS_TO_HOURS,
+        awake: awakeMs * MS_TO_HOURS,
+        total: (coreMs + deepMs + remMs + awakeMs) * MS_TO_HOURS,
+        samples,
       };
-      
-      console.log(`[HealthKit] RÉSULTAT FINAL - Core: ${result.core.toFixed(2)}h, Deep: ${result.deep.toFixed(2)}h, REM: ${result.rem.toFixed(2)}h, Total: ${result.total.toFixed(2)}h`);
-      
+
+      // Retourner null si aucun stade valide trouvé
+      if (result.total === 0) {
+        return resolve(null);
+      }
+
       resolve(result);
     });
   });
@@ -259,15 +307,68 @@ export const getSleepDuration = (dateStr?: string): Promise<number | null> => {
   return new Promise(async (resolve) => {
     const details = await getSleepDetails(dateStr);
     if (!details) return resolve(null);
-    
-    // Retourner le temps total de sommeil (Core + Deep + REM)
-    const totalSleep = details.total; // Temps total des 3 stades
-    console.log(`[HealthKit] Sommeil total calculé: ${totalSleep.toFixed(2)}h`);
-    
-    resolve(totalSleep);
+    // Return actual sleep time (core + deep + rem), excluding awake time
+    const actualSleep = details.core + details.deep + details.rem;
+    resolve(actualSleep);
   });
 };
 
+// ─── Sleep Score Calculation (shared between SleepScreen and global score) ────
+// Returns score 0-100 based on sleep quality, excluding awake time
+export const calculateSleepScore = (core: number, deep: number, rem: number, awake: number): number => {
+  // Actual sleep time (excluding awake periods)
+  const actualSleep = core + deep + rem;
+  
+  if (actualSleep === 0) return 0;
+  
+  // Calculate percentages of actual sleep
+  const deepPct = deep / actualSleep;
+  const remPct = rem / actualSleep;
+  const awakePct = awake > 0 ? awake / (actualSleep + awake) : 0;
+  
+  let score = 0;
+  
+  // 1. DURATION (40 points) - based on actual sleep time (not time in bed)
+  // Ideal: 7-9 hours of actual sleep
+  if (actualSleep >= 7 && actualSleep <= 9) score += 40;
+  else if (actualSleep >= 6.5) score += 35;
+  else if (actualSleep >= 6) score += 28;
+  else if (actualSleep >= 5.5) score += 20;
+  else if (actualSleep >= 5) score += 12;
+  else score += Math.max(0, actualSleep * 2); // 0-10 points for <5h
+  
+  // 2. DEEP SLEEP (30 points) - ideal: 15-25% of actual sleep
+  if (deepPct >= 0.20) score += 30;
+  else if (deepPct >= 0.15) score += 24;
+  else if (deepPct >= 0.10) score += 16;
+  else if (deepPct >= 0.05) score += 8;
+  else score += Math.max(0, deepPct * 100); // 0-5 points
+  
+  // 3. REM SLEEP (20 points) - ideal: 20-25% of actual sleep
+  if (remPct >= 0.20 && remPct <= 0.30) score += 20;
+  else if (remPct >= 0.15) score += 15;
+  else if (remPct >= 0.10) score += 10;
+  else if (remPct >= 0.05) score += 5;
+  else score += Math.max(0, remPct * 50); // 0-2.5 points
+  
+  // 4. EFFICIENCY (10 points) - low awake time is good
+  // Penalize if awake time is more than 10% of total time in bed
+  if (awakePct <= 0.05) score += 10;
+  else if (awakePct <= 0.10) score += 7;
+  else if (awakePct <= 0.15) score += 4;
+  else if (awakePct <= 0.20) score += 2;
+  else score += 0;
+  
+  return Math.min(100, Math.round(score));
+};
+
+// Helper to convert 0-100 sleep score to 0-20 global score points
+export const sleepScoreToGlobalPoints = (sleepScore100: number): number => {
+  // Linear conversion: 100 → 20, 0 → 0
+  return Math.round((sleepScore100 / 100) * 20);
+};
+
+// ─── Poids & composition corporelle ──────────────────────────────────────────
 export const getLatestWeight = (): Promise<number | null> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(null);
@@ -298,11 +399,7 @@ export const getWeightHistory = (days: number = 30): Promise<{ date: string; val
     };
     AppleHealthKit.getWeightSamples(options, (err, results) => {
       if (err) return resolve([]);
-      const samples = results.map(s => ({
-        date: s.startDate.split('T')[0],
-        value: s.value
-      }));
-      resolve(samples);
+      resolve(results.map(s => ({ date: s.startDate.split('T')[0], value: s.value })));
     });
   });
 };
@@ -315,11 +412,7 @@ export const getBodyFatHistory = (days: number = 30): Promise<{ date: string; va
     };
     (AppleHealthKit as any).getBodyFatPercentageSamples(options, (err: any, results: any) => {
       if (err) return resolve([]);
-      const samples = results.map((s: any) => ({
-        date: s.startDate.split('T')[0],
-        value: s.value * 100
-      }));
-      resolve(samples);
+      resolve(results.map((s: any) => ({ date: s.startDate.split('T')[0], value: s.value * 100 })));
     });
   });
 };
@@ -332,32 +425,61 @@ export const getBMIHistory = (days: number = 30): Promise<{ date: string; value:
     };
     AppleHealthKit.getBmiSamples(options, (err, results) => {
       if (err) return resolve([]);
-      const samples = (results || []).map(s => ({
-        date: s.startDate.split('T')[0],
-        value: s.value
-      }));
-      resolve(samples);
+      resolve((results || []).map(s => ({ date: s.startDate.split('T')[0], value: s.value })));
     });
   });
 };
 
 export const getLeanBodyMassHistory = (days: number = 30): Promise<{ date: string; value: number }[]> => {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     if (Platform.OS !== 'ios') return resolve([]);
-    const options: HealthInputOptions = {
-      startDate: new Date(new Date().setDate(new Date().getDate() - days)).toISOString(),
-    };
-    AppleHealthKit.getLeanBodyMassSamples(options, (err, results) => {
-      if (err) return resolve([]);
-      const samples = (results || []).map(s => ({
-        date: s.startDate.split('T')[0],
-        value: s.value
-      }));
-      resolve(samples);
+    
+    // Récupérer aussi le poids pour validation
+    const [leanResults, weightResults] = await Promise.all([
+      new Promise<any[]>((r) => {
+        const options: HealthInputOptions = {
+          startDate: new Date(new Date().setDate(new Date().getDate() - days)).toISOString(),
+        };
+        AppleHealthKit.getLeanBodyMassSamples(options, (err, results) => r(err ? [] : results || []));
+      }),
+      new Promise<Record<string, number>>((r) => {
+        const options: HealthInputOptions = {
+          startDate: new Date(new Date().setDate(new Date().getDate() - days)).toISOString(),
+          unit: 'kg' as any,
+        };
+        AppleHealthKit.getWeightSamples(options, (err, results) => {
+          if (err) return r({});
+          const map: Record<string, number> = {};
+          results.forEach((s: any) => {
+            const date = s.startDate.split('T')[0];
+            map[date] = s.value;
+          });
+          r(map);
+        });
+      })
+    ]);
+
+    // Fix: react-native-health convertit mal les unités (pense que c'est en lbs)
+    // Diviser par 2.20462 pour corriger
+    const LBS_TO_KG = 1 / 2.20462;
+    const correctedSamples = leanResults.map((s: any) => ({
+      ...s,
+      value: s.value * LBS_TO_KG
+    }));
+
+    // Filtrer les valeurs incohérentes (lean > weight)
+    const validSamples = correctedSamples.filter((s: any) => {
+      const date = s.startDate.split('T')[0];
+      const weightOnDate = weightResults[date];
+      const isValid = !weightOnDate || s.value <= weightOnDate;
+      return isValid;
     });
+
+    resolve(validSamples.map((s: any) => ({ date: s.startDate.split('T')[0], value: s.value })));
   });
 };
 
+// ─── Sauvegarde ───────────────────────────────────────────────────────────────
 export const saveCaloriesToHealth = (kcal: number): Promise<void> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios' || kcal <= 0) return resolve();
@@ -375,13 +497,11 @@ export const saveWeightToHealth = (weight: number): Promise<void> => {
   });
 };
 
+// ─── Divers ───────────────────────────────────────────────────────────────────
 export const getTodayDistance = (): Promise<number> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(0);
-    const options: HealthInputOptions = {
-      date: new Date().toISOString(),
-    };
-    AppleHealthKit.getDistanceWalkingRunning(options, (err, results) => {
+    AppleHealthKit.getDistanceWalkingRunning({ date: new Date().toISOString() }, (err, results) => {
       if (err) return resolve(0);
       resolve(results.value || 0);
     });
@@ -405,10 +525,7 @@ export const getTodayBasalEnergy = (): Promise<number> => {
 export const getTodayFlightsClimbed = (): Promise<number> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(0);
-    const options: HealthInputOptions = {
-      date: new Date().toISOString(),
-    };
-    AppleHealthKit.getFlightsClimbed(options, (err, results) => {
+    AppleHealthKit.getFlightsClimbed({ date: new Date().toISOString() }, (err, results) => {
       if (err) return resolve(0);
       resolve(results.value || 0);
     });
@@ -418,8 +535,7 @@ export const getTodayFlightsClimbed = (): Promise<number> => {
 export const getLatestRespiratoryRate = (): Promise<number | null> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(null);
-    const options: HealthInputOptions = { limit: 1 };
-    (AppleHealthKit as any).getRespiratoryRateSamples(options, (err: any, results: any) => {
+    (AppleHealthKit as any).getRespiratoryRateSamples({ limit: 1 }, (err: any, results: any) => {
       if (err || !results.length) return resolve(null);
       resolve(results[0].value);
     });
@@ -446,6 +562,7 @@ export const getLatestLeanBodyMass = (): Promise<number | null> => {
   });
 };
 
+// ─── Repas ────────────────────────────────────────────────────────────────────
 export type MealEntry = { meal: string; value: number; time: string };
 export type MealBreakdown = { total: number; meals: MealEntry[] };
 
@@ -460,7 +577,6 @@ export const getMealBreakdown = (dateStr?: string): Promise<MealBreakdown> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve({ total: 0, meals: [] });
 
-    // Default to today if no date provided
     const targetDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
     const startDate = new Date(targetDate);
     startDate.setHours(0, 0, 0, 0);
@@ -474,7 +590,6 @@ export const getMealBreakdown = (dateStr?: string): Promise<MealBreakdown> => {
     AppleHealthKit.getEnergyConsumedSamples(options, (err, results) => {
       if (err || !results.length) return resolve({ total: 0, meals: [] });
       let total = 0;
-      // Group by meal type and sum
       const byMeal: Record<string, { value: number; time: string }> = {};
       results.forEach((s: any) => {
         const val = Math.round(s.value || 0);
@@ -498,236 +613,8 @@ export const getMealBreakdown = (dateStr?: string): Promise<MealBreakdown> => {
   });
 };
 
+// ─── Dump complet pour debug ──────────────────────────────────────────────────
 export const logAllHealthData = async () => {
-  if (Platform.OS !== 'ios') return;
-  console.log('\n🚀🚀🚀 [HealthKit] DEBUT DU DUMP COMPLET 🚀🚀🚀\n');
-
-  const d7 = new Date(new Date().setDate(new Date().getDate() - 7)).toISOString();
-  const d30 = new Date(new Date().setDate(new Date().getDate() - 30)).toISOString();
-
-  const safe = (fn: () => Promise<any>, label: string) =>
-    fn().then(v => v).catch(() => { console.log(`  ⚠️ ${label} : erreur`); return null; });
-
-  const fetchSamples = (method: string, opts: any = {}): Promise<any[]> =>
-    new Promise((resolve) => {
-      const fn = (AppleHealthKit as any)[method];
-      if (!fn) return resolve([]);
-      fn(opts, (err: any, res: any) => err ? resolve([]) : resolve(res || []));
-    });
-
-  const printHistory = (label: string, samples: any[], valueFn: (s: any) => string) => {
-    if (!samples || !samples.length) {
-      console.log(`│   (aucune donnée)`);
-      return;
-    }
-    samples.slice(0, 5).forEach((s: any) => {
-      const date = (s.startDate || s.start || '').split('T')[0];
-      console.log(`│   ${date} → ${valueFn(s)}`);
-    });
-  };
-
-  try {
-    // ═══════════════ ACTIVITÉ ═══════════════
-    const steps = await safe(getTodaySteps, 'Pas');
-    const distance = await safe(getTodayDistance, 'Distance');
-    const flights = await safe(getTodayFlightsClimbed, 'Étages');
-    const activeEnergy = await safe(getTodayActiveEnergy, 'Énergie Active');
-    const basalEnergy = await safe(getTodayBasalEnergy, 'Énergie Basale');
-
-    // Historique pas (7j)
-    const stepHistory: any[] = await safe(() => fetchSamples('getDailyStepCountSamples', { startDate: d7 }), 'Pas Histo');
-    // Historique distance (7j)
-    const distHistory: any[] = await safe(() => fetchSamples('getDailyDistanceWalkingRunningSamples', { startDate: d7 }), 'Dist Histo');
-    // Historique étages (7j)
-    const flightHistory: any[] = await safe(() => fetchSamples('getDailyFlightsClimbedSamples', { startDate: d7 }), 'Étages Histo');
-
-    console.log('┌──────────────────────────────────────┐');
-    console.log('│           🏃 ACTIVITÉ                │');
-    console.log('├──────────────────────────────────────┤');
-    console.log(`│ Aujourd'hui :`);
-    console.log(`│   Pas            : ${steps}`);
-    console.log(`│   Distance       : ${distance ? (distance / 1000).toFixed(2) : 0} km`);
-    console.log(`│   Étages         : ${flights}`);
-    console.log(`│   É. Active      : ${activeEnergy} kcal`);
-    console.log(`│   É. Basale      : ${basalEnergy} kcal`);
-    console.log(`│   Total Brûlées  : ${(activeEnergy || 0) + (basalEnergy || 0)} kcal`);
-    console.log('│');
-    console.log('│ 📊 Historique Pas (7j) :');
-    printHistory('Pas', stepHistory, s => `${s.value} pas`);
-    console.log('│ 📊 Historique Distance (7j) :');
-    printHistory('Distance', distHistory, s => `${(s.value / 1000).toFixed(2)} km`);
-    console.log('│ 📊 Historique Étages (7j) :');
-    printHistory('Étages', flightHistory, s => `${s.value} étages`);
-    console.log('└──────────────────────────────────────┘');
-
-    // ═══════════════ NUTRITION ═══════════════
-    const calories = await safe(getTodayCalories, 'Calories');
-    const calHistory: any[] = await safe(() => fetchSamples('getEnergyConsumedSamples', { startDate: d7 }), 'Cal Histo');
-
-    console.log('┌──────────────────────────────────────┐');
-    console.log('│           🍎 NUTRITION               │');
-    console.log('├──────────────────────────────────────┤');
-    console.log(`│ Aujourd'hui       : ${calories} kcal`);
-    console.log('│');
-    console.log('│ 📊 Historique Calories (7j, détail repas) :');
-    if (calHistory && calHistory.length) {
-      // Group by day
-      const byDay: Record<string, { total: number; meals: { meal: string; value: number; time: string }[] }> = {};
-      calHistory.forEach((s: any) => {
-        const date = (s.startDate || '').split('T')[0];
-        const time = (s.startDate || '').split('T')[1]?.substring(0, 5) || '';
-        const meal = s.metadata?.HKFoodMeal || s.metadata?.meal || s.meal || s.metadata?.HKFoodType || '?';
-        if (!byDay[date]) byDay[date] = { total: 0, meals: [] };
-        byDay[date].total += (s.value || 0);
-        byDay[date].meals.push({ meal, value: Math.round(s.value || 0), time });
-      });
-      Object.entries(byDay).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 7).forEach(([date, data]) => {
-        console.log(`│   ${date} — Total: ${Math.round(data.total)} kcal`);
-        data.meals.forEach(m => {
-          console.log(`│     ${m.time} ${m.meal} : ${m.value} kcal`);
-        });
-      });
-    } else {
-      console.log('│   (aucune donnée)');
-    }
-    console.log('└──────────────────────────────────────┘');
-
-    // ═══════════════ COMPOSITION CORPORELLE ═══════════════
-    const weight = await safe(getLatestWeight, 'Poids');
-    const fat = await safe(getLatestBodyFat, 'Masse Grasse');
-    const bmiHistory = await safe(() => getBMIHistory(1), 'BMI');
-    const bmi = bmiHistory?.[0]?.value || null;
-    const leanHistory = await safe(() => getLeanBodyMassHistory(1), 'Masse Maigre');
-    const lean = leanHistory?.[0]?.value || null;
-
-    const height: number | null = await safe(() => new Promise((resolve) => {
-      AppleHealthKit.getLatestHeight({}, (err, result) => {
-        if (err || !result) return resolve(null);
-        resolve(result.value);
-      });
-    }), 'Taille');
-
-    // Historiques 30j
-    const weightHistory: any[] = await safe(() => fetchSamples('getWeightSamples', { startDate: d30, unit: 'kg' }), 'Poids Histo');
-    const fatSamples: any[] = await safe(() => fetchSamples('getBodyFatPercentageSamples', { startDate: d30, limit: 10 }), 'Fat Histo');
-    const bmiSamples: any[] = await safe(() => getBMIHistory(30), 'BMI Histo');
-    const leanSamples: any[] = await safe(() => getLeanBodyMassHistory(30), 'Lean Histo');
-
-    console.log('┌──────────────────────────────────────┐');
-    console.log('│   🏋️ COMPOSITION CORPORELLE (Renpho) │');
-    console.log('├──────────────────────────────────────┤');
-    console.log(`│ Dernier relevé :`);
-    console.log(`│   Taille         : ${height ? (height * 2.54).toFixed(1) : '?'} cm`);
-    console.log(`│   Poids          : ${weight?.toFixed(1)} kg`);
-    console.log(`│   IMC (BMI)      : ${bmi?.toFixed(1)}`);
-    console.log(`│   Masse Grasse   : ${fat?.toFixed(1)} %`);
-    console.log(`│   Masse Maigre   : ${lean?.toFixed(1)} kg`);
-    console.log('│');
-    console.log('│ 📊 Historique Poids (30j) :');
-    printHistory('Poids', weightHistory, s => `${s.value?.toFixed(1)} kg`);
-    console.log('│ 📊 Historique Masse Grasse (30j) :');
-    printHistory('Fat', fatSamples, s => `${(s.value * 100).toFixed(1)} %`);
-    console.log('│ 📊 Historique IMC (30j) :');
-    printHistory('BMI', bmiSamples, s => `${s.value?.toFixed(1)}`);
-    console.log('│ 📊 Historique Masse Maigre (30j) :');
-    printHistory('Lean', leanSamples, s => `${s.value?.toFixed(1)} kg`);
-    console.log('└──────────────────────────────────────┘');
-
-    // ═══════════════ SANTÉ & VITAUX ═══════════════
-    const hr = await safe(getLatestHeartRate, 'FC');
-    const rhr = await safe(getRestingHeartRate, 'FC Repos');
-    const resp = await safe(getLatestRespiratoryRate, 'FR');
-    const sleep = await safe(getSleepDuration, 'Sommeil');
-
-    // HRV
-    const hrvSamples: any[] = await safe(() => new Promise((resolve) => {
-      AppleHealthKit.getHeartRateVariabilitySamples(
-        { startDate: d7, limit: 5 } as any,
-        (err, res) => err ? resolve([]) : resolve(res || [])
-      );
-    }), 'HRV Histo');
-
-    // VO2 Max
-    const vo2Samples: any[] = await safe(() => fetchSamples('getVo2MaxSamples', { startDate: d30, limit: 5 }), 'VO2 Histo');
-
-    // SpO2
-    const spo2Samples: any[] = await safe(() => fetchSamples('getOxygenSaturationSamples', { startDate: d7, limit: 5 }), 'SpO2 Histo');
-
-    // Blood Pressure
-    const bpSamples: any[] = await safe(() => fetchSamples('getBloodPressureSamples', { startDate: d30, limit: 5 }), 'BP Histo');
-
-    // Walking HR Average
-    const walkHr: number | null = await safe(() => new Promise((resolve) => {
-      (AppleHealthKit as any).getWalkingHeartRateAverage(
-        {},
-        (err: any, res: any) => (err || !res) ? resolve(null) : resolve(res.value)
-      );
-    }), 'FC Marche');
-
-    // Heart rate history (7j)
-    const hrHistory: any[] = await safe(() => new Promise((resolve) => {
-      AppleHealthKit.getHeartRateSamples(
-        { startDate: d7, limit: 10 } as any,
-        (err, res) => err ? resolve([]) : resolve(res || [])
-      );
-    }), 'HR Histo');
-
-    // Sleep history (7j)
-    const sleepHistory: any[] = await safe(() => new Promise((resolve) => {
-      AppleHealthKit.getSleepSamples(
-        { startDate: d7 },
-        (err, res) => err ? resolve([]) : resolve(res || [])
-      );
-    }), 'Sleep Histo');
-
-    // Respiratory rate history
-    const respHistory: any[] = await safe(() => fetchSamples('getRespiratoryRateSamples', { startDate: d7, limit: 5 }), 'Resp Histo');
-
-    console.log('┌──────────────────────────────────────┐');
-    console.log('│        ❤️ SANTÉ & VITAUX             │');
-    console.log('├──────────────────────────────────────┤');
-    console.log(`│ Dernier relevé :`);
-    console.log(`│   FC              : ${hr} bpm`);
-    console.log(`│   FC Repos        : ${rhr} bpm`);
-    console.log(`│   FC Marche Moy.  : ${walkHr} bpm`);
-    console.log(`│   VFC (HRV)       : ${hrvSamples.length ? hrvSamples[0].value?.toFixed(0) : '?'} ms`);
-    console.log(`│   VO2 Max         : ${vo2Samples.length ? vo2Samples[0].value?.toFixed(1) : '?'} mL/kg/min`);
-    console.log(`│   SpO2            : ${spo2Samples.length ? (spo2Samples[0].value * 100).toFixed(0) : '?'} %`);
-    console.log(`│   Tension         : ${bpSamples.length ? `${bpSamples[0].bloodPressureSystolicValue}/${bpSamples[0].bloodPressureDiastolicValue} mmHg` : 'N/A'}`);
-    console.log(`│   Fréq. Resp.     : ${resp} mov/min`);
-    console.log(`│   Sommeil         : ${sleep?.toFixed(1)} h`);
-    console.log('│');
-    console.log('│ 📊 Historique FC (7j, 10 derniers) :');
-    printHistory('HR', hrHistory, s => `${Math.round(s.value)} bpm`);
-    console.log('│ 📊 Historique HRV (7j) :');
-    printHistory('HRV', hrvSamples, s => `${s.value?.toFixed(0)} ms`);
-    console.log('│ 📊 Historique VO2 Max (30j) :');
-    printHistory('VO2', vo2Samples, s => `${s.value?.toFixed(1)} mL/kg/min`);
-    console.log('│ 📊 Historique SpO2 (7j) :');
-    printHistory('SpO2', spo2Samples, s => `${(s.value * 100).toFixed(0)} %`);
-    console.log('│ 📊 Historique Tension (30j) :');
-    printHistory('BP', bpSamples, s => `${s.bloodPressureSystolicValue}/${s.bloodPressureDiastolicValue} mmHg`);
-    console.log('│ 📊 Historique Fréq. Resp. (7j) :');
-    printHistory('Resp', respHistory, s => `${s.value?.toFixed(1)} mov/min`);
-    console.log('│ 📊 Historique Sommeil (7j) :');
-    if (sleepHistory.length) {
-      // Group sleep by date
-      const byDate: Record<string, number> = {};
-      sleepHistory.forEach((s: any) => {
-        const date = s.startDate.split('T')[0];
-        const ms = new Date(s.endDate).getTime() - new Date(s.startDate).getTime();
-        byDate[date] = (byDate[date] || 0) + ms;
-      });
-      Object.entries(byDate).slice(0, 5).forEach(([date, ms]) => {
-        console.log(`│   ${date} → ${(ms / 3600000).toFixed(1)} h`);
-      });
-    } else {
-      console.log('│   (aucune donnée)');
-    }
-    console.log('└──────────────────────────────────────┘');
-
-    console.log('\n🚀🚀🚀 [HealthKit] FIN DU DUMP COMPLET 🚀🚀🚀\n');
-  } catch (error) {
-    console.log('[HealthKit] Dump Error:', error);
-  }
+  // Fonction de debug désactivée - les logs ont été supprimés
+  // Réactiver si besoin de diagnostiquer les données HealthKit
 };

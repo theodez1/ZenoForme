@@ -494,7 +494,10 @@ export default function HistoryScreen({ navigation }: { navigation: any }) {
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
       <View style={s.header}>
-        <Text style={s.heading}>Bilan</Text>
+        <View>
+          <Text style={s.heading}>Bilan</Text>
+          <Text style={s.subheading}>Ton historique de santé</Text>
+        </View>
         <TouchableOpacity
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -552,9 +555,10 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14,
+    paddingHorizontal: 20, paddingTop: 16, marginBottom: 20,
   },
-  heading: { color: C.text, fontSize: 30, fontWeight: '900', letterSpacing: -1.2 },
+  heading: { color: C.text, fontSize: 30, fontWeight: '900', letterSpacing: -1 },
+  subheading: { color: C.textSub, fontSize: 13, fontWeight: '500', marginTop: 4 },
   settingsBtn: {
     width: 38, height: 38, borderRadius: 12,
     backgroundColor: C.card, alignItems: 'center', justifyContent: 'center',

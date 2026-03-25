@@ -110,9 +110,9 @@ export default function PhotosScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, marginBottom: 20 },
-  heading: { color: C.text, fontSize: 32, fontWeight: '900', letterSpacing: -1 },
-  subheading: { color: C.textSub, fontSize: 13, fontWeight: '500', marginTop: 2 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, marginBottom: 20 },
+  heading: { color: C.text, fontSize: 30, fontWeight: '900', letterSpacing: -1 },
+  subheading: { color: C.textSub, fontSize: 13, fontWeight: '500', marginTop: 4 },
   addBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
 
   scroll: { paddingHorizontal: 16 },

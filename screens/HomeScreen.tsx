@@ -12,12 +12,12 @@ import * as Haptics from 'expo-haptics';
 import {
   DayEntry, updateDay, getAllDays,
   computeStreak, getDayScore, getDay, getProfile,
-  calculateCalorieGoal,
+  calculateCalorieGoal, getScoreLabel,
 } from '../utils/storage';
 import { requestPermissions, scheduleAll } from '../utils/notifications';
 import {
   getTodayCalories, getLatestWeight, getTodaySteps,
-  getTodayActiveEnergy, getLatestHeartRate, getSleepDuration, getSleepDetails,
+  getTodayActiveEnergy, getLatestHeartRate, getSleepDetails,
   getLatestBodyFat, logAllHealthData, getMealBreakdown,
   MealBreakdown,
 } from '../utils/health';
@@ -119,7 +119,7 @@ function AppHeader({
 const h = StyleSheet.create({
   wrapper: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 0 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-  greeting: { color: C.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
+  greeting: { color: C.text, fontSize: 30, fontWeight: '900', letterSpacing: -1 },
   streakPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: C.surface, borderRadius: 20,
@@ -141,7 +141,7 @@ const h = StyleSheet.create({
 
 // ─── Score Ring ───────────────────────────────────────────────────────────────
 function ScoreRing({ score }: { score: number }) {
-  const color = score >= 75 ? C.green : score >= 40 ? C.accent : C.red;
+  const { color } = getScoreLabel(score);
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center', width: 68, height: 68 }}>
       <View style={{ position: 'absolute', width: 68, height: 68, borderRadius: 34, borderWidth: 3, borderColor: C.border }} />
@@ -425,52 +425,60 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
   useEffect(() => { noteRef.current = note; }, [note]);
 
   const load = useCallback(async () => {
-    console.log(`[HomeScreen] Chargement des données pour ${date}...`);
     const d = await getDay(date);
-    if (d) { 
-      setEntry(d); 
-      setNote(d.note || ''); 
-      setScore(getDayScore(d, goal)); 
-      console.log(`[HomeScreen] Données existantes - walk: ${d.walk}, steps: ${d.steps}`);
+    if (d) {
+      setEntry(d);
+      setNote(d.note || '');
+      setScore(getDayScore(d, goal));
     }
-    
-    // Récupérer les détails du sommeil pour voir les 3 stades
+
+    // ─── Récupération du sommeil : additionne Core + Deep + REM ───────────
     const sleepDetails = await getSleepDetails(date);
-    if (sleepDetails) {
-      console.log(`[HomeScreen] Stades sommeil:`);
-      console.log(`  - Core: ${sleepDetails.core.toFixed(2)}h`);
-      console.log(`  - Deep: ${sleepDetails.deep.toFixed(2)}h`);
-      console.log(`  - REM: ${sleepDetails.rem.toFixed(2)}h`);
-      console.log(`  - Total: ${sleepDetails.total.toFixed(2)}h`);
-    }
-    
-    const [hKcal, hSteps, hEnergy, hSleep, hWeight, hFat, hHeart, meals] = await Promise.all([
-      getTodayCalories(date), getTodaySteps(date), getTodayActiveEnergy(date),
-      getSleepDuration(date), getLatestWeight(), getLatestBodyFat(),
-      getLatestHeartRate(), getMealBreakdown(date),
+    const sleepTotal = sleepDetails
+      ? parseFloat((sleepDetails.core + sleepDetails.deep + sleepDetails.rem).toFixed(2))
+      : null;
+
+    const [hKcal, hSteps, hEnergy, hWeight, hFat, hHeart, meals] = await Promise.all([
+      getTodayCalories(date),
+      getTodaySteps(date),
+      getTodayActiveEnergy(date),
+      getLatestWeight(),
+      getLatestBodyFat(),
+      getLatestHeartRate(),
+      getMealBreakdown(date),
     ]);
-    console.log(`[HomeScreen] Données HealthKit - pas: ${hSteps}, calories: ${hKcal}, sommeil: ${hSleep}h`);
+
     setMealData(meals);
+
     const patch: Partial<DayEntry> = {};
     if (hKcal > 0) patch.calories = hKcal;
     if (hWeight && !d?.weight) patch.weight = parseFloat(hWeight.toFixed(1));
     if (hEnergy > 0) patch.activeEnergy = hEnergy;
     if (hHeart) patch.heartRate = hHeart;
-    if (hSleep && !d?.sleep) patch.sleep = hSleep;
     if (hFat) patch.bodyFat = hFat;
-    
-    // Mettre à jour les pas HealthKit SANS écraser la validation manuelle
+
+    // Sauvegarde le sommeil avec les détails pour le scoring de qualité
+    if (sleepDetails && sleepTotal !== null) {
+      patch.sleep = sleepTotal;
+      patch.sleepDetails = {
+        core: sleepDetails.core,
+        deep: sleepDetails.deep,
+        rem: sleepDetails.rem,
+        awake: sleepDetails.awake,
+      };
+    }
+
+    // Mettre à jour les pas HealthKit sans écraser la validation manuelle de marche
     if (hSteps !== d?.steps) {
       patch.steps = hSteps;
-      console.log(`[HomeScreen] Mise à jour des pas: ${d?.steps} → ${hSteps}`);
     }
-    
+
     if (Object.keys(patch).length > 0) {
-      console.log(`[HomeScreen] Patch appliqué:`, patch);
       await updateDay(date, patch);
       const next = await getDay(date);
       if (next) { setEntry(next); setScore(getDayScore(next, goal)); }
     }
+
     setLoaded(true);
   }, [date, goal]);
 
@@ -484,7 +492,7 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
 
   useEffect(() => {
     if (!isActive) return;
-    const interval = setInterval(() => { load(); }, 10_000);
+    const interval = setInterval(() => { load(); }, 60_000); // Refresh every minute
     return () => clearInterval(interval);
   }, [isActive, load]);
 
@@ -506,8 +514,7 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
   };
 
   const steps = entry.steps || 0;
-
-  const scoreColor = score >= 75 ? C.green : score >= 40 ? C.accent : C.red;
+  const { text: scoreText, color: scoreColor } = getScoreLabel(score);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -525,20 +532,42 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
               <View style={[pg.heroFill, { width: `${score}%`, backgroundColor: scoreColor }]} />
             </View>
             <Text style={[pg.heroSub, { color: scoreColor }]}>
-              {score >= 75 ? 'Journée parfaite' : score >= 40 ? 'Bonne progression' : 'Commence par une marche'}
+              {scoreText}
             </Text>
+            
+            {/* Détail du score - 2 colonnes */}
+            <View style={{ flexDirection: 'row', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border }}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <View style={[pg.tinyDot, { backgroundColor: C.blue }]} />
+                <Text style={{ color: C.textSub, fontSize: 9, fontWeight: '500' }}>Activité:</Text>
+                <Text style={{ color: C.blue, fontSize: 9, fontWeight: '700' }}>{Math.round((entry.walk ? 30 : (entry.steps || 0) >= 10000 ? 30 : Math.min(30, ((entry.steps || 0) / 10000) * 30)))}/30</Text>
+              </View>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <View style={[pg.tinyDot, { backgroundColor: C.orange }]} />
+                <Text style={{ color: C.textSub, fontSize: 9, fontWeight: '500' }}>Nutrition:</Text>
+                <Text style={{ color: entry.calories ? C.orange : C.textMuted, fontSize: 9, fontWeight: '700' }}>{entry.calories ? 'OK' : '--'}/30</Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', marginTop: 6 }}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <View style={[pg.tinyDot, { backgroundColor: C.accent }]} />
+                <Text style={{ color: C.textSub, fontSize: 9, fontWeight: '500' }}>Eau:</Text>
+                <Text style={{ color: (entry.water || 0) > 0 ? C.accent : C.textMuted, fontSize: 9, fontWeight: '700' }}>{Math.min(20, Math.round(((entry.water || 0) / 8) * 20))}/20</Text>
+              </View>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <View style={[pg.tinyDot, { backgroundColor: C.green }]} />
+                <Text style={{ color: C.textSub, fontSize: 9, fontWeight: '500' }}>Sommeil:</Text>
+                <Text style={{ color: entry.sleep ? C.green : C.textMuted, fontSize: 9, fontWeight: '700' }}>{entry.sleep ? Math.min(20, Math.round((entry.sleep / 8) * 20)) : '--'}/20</Text>
+              </View>
+            </View>
           </View>
         </View>
 
         <WalkTile
           done={entry.walk}
-          onToggle={async () => {
+          onToggle={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-            // Toggle la validation manuelle de la marche
-            const nextValue = !entry.walk;
-
-            update({ walk: nextValue });
+            update({ walk: !entry.walk });
           }}
         />
 
@@ -563,6 +592,7 @@ const pg = StyleSheet.create({
   heroBg: { height: 5, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
   heroFill: { height: '100%', borderRadius: 3 },
   heroSub: { fontSize: 12, fontWeight: '600' },
+  tinyDot: { width: 5, height: 5, borderRadius: 2.5 },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
