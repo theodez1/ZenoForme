@@ -332,7 +332,7 @@ const ac = StyleSheet.create({
   vitalUnit: { color: C.textSub, fontSize: 10, fontWeight: '500' },
 });
 
-// ─── Water Card ───────────────────────────────────────────────────────────────
+// ─── Water Card ─────────────────────────────────────────────────────────────--──
 function WaterCard({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <View style={wc.card}>
@@ -442,7 +442,7 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
       getTodayCalories(date),
       getTodaySteps(date),
       getTodayActiveEnergy(date),
-      getLatestWeight(),
+      getLatestWeight(date),
       getLatestBodyFat(),
       getLatestHeartRate(),
       getMealBreakdown(date),
@@ -545,7 +545,20 @@ function DayPage({ date, isActive, isPreloaded, goal, onUpdate }: {
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <View style={[pg.tinyDot, { backgroundColor: C.orange }]} />
                 <Text style={{ color: C.textSub, fontSize: 9, fontWeight: '500' }}>Nutrition:</Text>
-                <Text style={{ color: entry.calories ? C.orange : C.textMuted, fontSize: 9, fontWeight: '700' }}>{entry.calories ? 'OK' : '--'}/30</Text>
+                <Text style={{ color: entry.calories ? C.orange : C.textMuted, fontSize: 9, fontWeight: '700' }}>
+                  {entry.calories && goal > 0 ? (() => {
+                    const diff = entry.calories! - goal;
+                    if (diff >= -300 && diff <= -100) return 30;
+                    if (diff > -100 && diff <= 0) return 27;
+                    if (diff > 0 && diff <= 100) return 25;
+                    if (diff > 100 && diff <= 250) return 18;
+                    if (diff > 250 && diff <= 500) return 10;
+                    if (diff > 500 && diff <= 800) return 4;
+                    if (diff < -300 && diff >= -600) return 20;
+                    if (diff < -600) return 12;
+                    return 0;
+                  })() : '--'}/30
+                </Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 6 }}>

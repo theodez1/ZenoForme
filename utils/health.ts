@@ -93,25 +93,38 @@ export const getTodayCalories = (dateStr?: string): Promise<number> => {
 };
 
 // ─── Pas ──────────────────────────────────────────────────────────────────────
-export const getTodaySteps = (dateStr?: string): Promise<number> => {
-  return new Promise((resolve) => {
-    if (Platform.OS !== 'ios') {
-      return resolve(0);
-    }
-
-    const targetDate = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
-    const options: HealthInputOptions = {
-      date: targetDate.toISOString(),
-    };
-
-    AppleHealthKit.getStepCount(options, (err, results) => {
-      if (err) {
-        return resolve(0);
-      }
-      const steps = results.value || 0;
-      resolve(steps);
+export const getTodaySteps = async (dateStr?: string): Promise<number> => {
+  if (Platform.OS !== 'ios') return 0;
+  
+  const targetDate = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
+  
+  // Use getStepCount which returns HealthKit's aggregated value (includes ALL sources)
+  const aggregatedSteps = await new Promise<number>((resolve) => {
+    AppleHealthKit.getStepCount({ date: targetDate.toISOString() }, (err, results) => {
+      resolve(err ? 0 : (results?.value || 0));
     });
   });
+  
+  // Fallback to daily samples if needed
+  if (aggregatedSteps === 0) {
+    const startDate = new Date(targetDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(targetDate);
+    endDate.setHours(23, 59, 59, 999);
+    
+    return new Promise((resolve) => {
+      (AppleHealthKit as any).getDailyStepCountSamples(
+        { startDate: startDate.toISOString(), endDate: endDate.toISOString() },
+        (err: any, results: any) => {
+          if (err || !results) return resolve(0);
+          const total = results.reduce((acc: number, sample: any) => acc + (sample.value || 0), 0);
+          resolve(Math.round(total));
+        }
+      );
+    });
+  }
+  
+  return aggregatedSteps;
 };
 
 // ─── Énergie active ───────────────────────────────────────────────────────────
@@ -369,12 +382,28 @@ export const sleepScoreToGlobalPoints = (sleepScore100: number): number => {
 };
 
 // ─── Poids & composition corporelle ──────────────────────────────────────────
-export const getLatestWeight = (): Promise<number | null> => {
+export const getLatestWeight = (dateStr?: string): Promise<number | null> => {
   return new Promise((resolve) => {
     if (Platform.OS !== 'ios') return resolve(null);
-    AppleHealthKit.getLatestWeight({ unit: 'kg' } as any, (err, result) => {
-      if (err) return resolve(null);
-      resolve(result ? result.value : null);
+    
+    // Si une date est spécifiée, ne récupérer que les poids de cette date
+    const targetDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+    const startDate = new Date(targetDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(targetDate);
+    endDate.setHours(23, 59, 59, 999);
+    
+    const options: HealthInputOptions = {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      unit: 'kg' as any,
+    };
+    
+    AppleHealthKit.getWeightSamples(options, (err, results) => {
+      if (err || !results || results.length === 0) return resolve(null);
+      // Prendre le dernier poids de la journée (le plus récent)
+      const lastWeight = results[results.length - 1].value;
+      resolve(lastWeight);
     });
   });
 };
@@ -399,7 +428,14 @@ export const getWeightHistory = (days: number = 30): Promise<{ date: string; val
     };
     AppleHealthKit.getWeightSamples(options, (err, results) => {
       if (err) return resolve([]);
-      resolve(results.map(s => ({ date: s.startDate.split('T')[0], value: s.value })));
+      resolve(results.map(s => {
+        // Correction: gérer le format de date avec fuseau horaire
+        const dateStr = s.startDate?.split('T')[0] || 
+                       (s.startDate?.includes('+') ? s.startDate.split('+')[0].split('T')[0] : 
+                        s.startDate?.includes('Z') ? s.startDate.split('Z')[0].split('T')[0] : 
+                        new Date(s.startDate).toISOString().split('T')[0]);
+        return { date: dateStr, value: s.value };
+      }).sort((a, b) => a.date.localeCompare(b.date)));
     });
   });
 };
@@ -412,7 +448,13 @@ export const getBodyFatHistory = (days: number = 30): Promise<{ date: string; va
     };
     (AppleHealthKit as any).getBodyFatPercentageSamples(options, (err: any, results: any) => {
       if (err) return resolve([]);
-      resolve(results.map((s: any) => ({ date: s.startDate.split('T')[0], value: s.value * 100 })));
+      resolve(results.map((s: any) => {
+        const dateStr = s.startDate?.split('T')[0] || 
+                       (s.startDate?.includes('+') ? s.startDate.split('+')[0].split('T')[0] : 
+                        s.startDate?.includes('Z') ? s.startDate.split('Z')[0].split('T')[0] : 
+                        new Date(s.startDate).toISOString().split('T')[0]);
+        return { date: dateStr, value: s.value * 100 };
+      }).sort((a: any, b: any) => a.date.localeCompare(b.date)));
     });
   });
 };
@@ -425,7 +467,13 @@ export const getBMIHistory = (days: number = 30): Promise<{ date: string; value:
     };
     AppleHealthKit.getBmiSamples(options, (err, results) => {
       if (err) return resolve([]);
-      resolve((results || []).map(s => ({ date: s.startDate.split('T')[0], value: s.value })));
+      resolve((results || []).map(s => {
+        const dateStr = s.startDate?.split('T')[0] || 
+                       (s.startDate?.includes('+') ? s.startDate.split('+')[0].split('T')[0] : 
+                        s.startDate?.includes('Z') ? s.startDate.split('Z')[0].split('T')[0] : 
+                        new Date(s.startDate).toISOString().split('T')[0]);
+        return { date: dateStr, value: s.value };
+      }).sort((a, b) => a.date.localeCompare(b.date)));
     });
   });
 };
@@ -475,7 +523,13 @@ export const getLeanBodyMassHistory = (days: number = 30): Promise<{ date: strin
       return isValid;
     });
 
-    resolve(validSamples.map((s: any) => ({ date: s.startDate.split('T')[0], value: s.value })));
+    resolve(validSamples.map((s: any) => {
+      const dateStr = s.startDate?.split('T')[0] || 
+                     (s.startDate?.includes('+') ? s.startDate.split('+')[0].split('T')[0] : 
+                      s.startDate?.includes('Z') ? s.startDate.split('Z')[0].split('T')[0] : 
+                      new Date(s.startDate).toISOString().split('T')[0]);
+      return { date: dateStr, value: s.value };
+    }).sort((a: any, b: any) => a.date.localeCompare(b.date)));
   });
 };
 
@@ -618,3 +672,266 @@ export const logAllHealthData = async () => {
   // Fonction de debug désactivée - les logs ont été supprimés
   // Réactiver si besoin de diagnostiquer les données HealthKit
 };
+
+// ─── Debug des pas - pour diagnostiquer les données montre vs téléphone ───────
+export const debugStepsData = async (dateStr?: string): Promise<void> => {
+  if (Platform.OS !== 'ios') return;
+  
+  const targetDate = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
+  const startDate = new Date(targetDate);
+  startDate.setHours(0, 0, 0, 0);
+  const endDate = new Date(targetDate);
+  endDate.setHours(23, 59, 59, 999);
+
+  console.log('=== DEBUG STEPS DATA ===');
+  console.log('Date:', targetDate.toISOString().split('T')[0]);
+
+  // 1. Test getStepCount (ancienne méthode)
+  try {
+    const stepCountResult = await new Promise<any>((resolve) => {
+      AppleHealthKit.getStepCount({ date: targetDate.toISOString() }, (err, results) => {
+        resolve({ err, results });
+      });
+    });
+    console.log('1. getStepCount:', stepCountResult.err ? 'ERROR' : stepCountResult.results);
+  } catch (e) {
+    console.log('1. getStepCount: FAILED', e);
+  }
+
+  // 2. Test getDailyStepCountSamples
+  try {
+    const dailyResult = await new Promise<any>((resolve) => {
+      (AppleHealthKit as any).getDailyStepCountSamples(
+        { startDate: startDate.toISOString(), endDate: endDate.toISOString() },
+        (err: any, results: any) => resolve({ err, results })
+      );
+    });
+    console.log('2. getDailyStepCountSamples:', dailyResult.err ? 'ERROR' : dailyResult.results);
+  } catch (e) {
+    console.log('2. getDailyStepCountSamples: FAILED', e);
+  }
+
+  // 3. Test getStepSamples (échantillons bruts avec source)
+  try {
+    const samplesResult = await new Promise<any>((resolve) => {
+      (AppleHealthKit as any).getStepSamples(
+        { startDate: startDate.toISOString(), endDate: endDate.toISOString() },
+        (err: any, results: any) => resolve({ err, results })
+      );
+    });
+    console.log('3. getStepSamples count:', samplesResult.results?.length || 0);
+    if (samplesResult.results && samplesResult.results.length > 0) {
+      console.log('   First 3 samples:', samplesResult.results.slice(0, 3));
+    }
+  } catch (e) {
+    console.log('3. getStepSamples: FAILED', e);
+  }
+
+  // 4. Test getDistanceWalkingRunning (peut être lié aux pas de montre)
+  try {
+    const distanceResult = await new Promise<any>((resolve) => {
+      AppleHealthKit.getDistanceWalkingRunning(
+        { startDate: startDate.toISOString(), endDate: endDate.toISOString() },
+        (err, results) => resolve({ err, results })
+      );
+    });
+    console.log('4. getDistanceWalkingRunning:', distanceResult.err ? 'ERROR' : distanceResult.results);
+  } catch (e) {
+    console.log('4. getDistanceWalkingRunning: FAILED', e);
+  }
+
+  console.log('=== END DEBUG ===');
+};
+
+// ─── Raw step samples - pour voir toutes les sources de pas ────────────────────
+export const getRawStepSamples = async (dateStr?: string): Promise<void> => {
+  if (Platform.OS !== 'ios') return;
+  
+  const targetDate = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
+  const startDate = new Date(targetDate);
+  startDate.setHours(0, 0, 0, 0);
+  const endDate = new Date(targetDate);
+  endDate.setHours(23, 59, 59, 999);
+
+  const options: HealthInputOptions = {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  };
+
+  console.log('[STEPS] === RAW STEP SAMPLES ===');
+  
+  // Try to get raw step samples
+  (AppleHealthKit as any).getStepSamples(options, (err: any, results: any) => {
+    if (err || !results || results.length === 0) {
+      console.log('[STEPS] Raw step samples: none found');
+      return;
+    }
+    
+    console.log(`[STEPS] Raw samples count: ${results.length}`);
+    
+    // Group by source
+    const bySource: Record<string, { count: number; steps: number }> = {};
+    results.forEach((sample: any) => {
+      const source = sample.sourceName || sample.source || 'unknown';
+      if (!bySource[source]) {
+        bySource[source] = { count: 0, steps: 0 };
+      }
+      bySource[source].count++;
+      bySource[source].steps += (sample.value || 0);
+    });
+    
+    console.log('[STEPS] By source:', bySource);
+  });
+};
+
+export const getWorkoutSteps = async (dateStr?: string): Promise<number> => {
+  return new Promise((resolve) => {
+    if (Platform.OS !== 'ios') return resolve(0);
+    
+    const targetDate = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
+    const startDate = new Date(targetDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(targetDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    const options: HealthInputOptions = {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    };
+
+    // Get ONLY workout samples (not all samples)
+    (AppleHealthKit as any).getWorkoutSamples(options, (err: any, results: any) => {
+      if (err || !results || results.length === 0) {
+        return resolve(0);
+      }
+      
+      let workoutSteps = 0;
+      results.forEach((workout: any) => {
+        const steps = workout.steps || workout.metadata?.HKStepCount || 0;
+        workoutSteps += steps;
+      });
+      
+      resolve(Math.round(workoutSteps));
+    });
+  });
+};
+
+// ─── Toutes les metriques supplementaires ──────────────────────────────────────
+export const getAllHealthMetrics = async (dateStr?: string) => {
+  if (Platform.OS !== 'ios') return null;
+  
+  const targetDate = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
+  const startDate = new Date(targetDate);
+  startDate.setHours(0, 0, 0, 0);
+  const endDate = new Date(targetDate);
+  endDate.setHours(23, 59, 59, 999);
+
+  const options: HealthInputOptions = {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  };
+
+  const metrics: any = {};
+
+  try {
+    // 1. Steps
+    metrics.steps = await getTodaySteps(dateStr);
+
+    // 2. Distance walking/running
+    metrics.distance = await new Promise((resolve) => {
+      AppleHealthKit.getDistanceWalkingRunning(options, (err: any, result: any) => {
+        resolve(err ? 0 : result?.value || 0);
+      });
+    });
+
+    // 3. Active energy
+    metrics.activeEnergy = await getTodayActiveEnergy(dateStr);
+
+    // 4. Workouts count (may not exist)
+    metrics.workouts = await new Promise((resolve) => {
+      const hasMethod = !!(AppleHealthKit as any).getWorkoutSamples;
+      if (!hasMethod) return resolve(0);
+      (AppleHealthKit as any).getWorkoutSamples(options, (err: any, results: any) => {
+        resolve(err ? 0 : results?.length || 0);
+      });
+    });
+
+    // 5. Running pace (may not exist)
+    metrics.runningPace = await new Promise((resolve) => {
+      const hasMethod = !!(AppleHealthKit as any).getRunningSpeedSamples;
+      if (!hasMethod) return resolve(null);
+      (AppleHealthKit as any).getRunningSpeedSamples(options, (err: any, results: any) => {
+        if (err || !results?.length) return resolve(null);
+        const avg = results.reduce((acc: number, s: any) => acc + (s.value || 0), 0) / results.length;
+        resolve(avg);
+      });
+    });
+
+    // 6. Walking speed (may not exist)
+    metrics.walkingSpeed = await new Promise((resolve) => {
+      const hasMethod = !!(AppleHealthKit as any).getWalkingSpeedSamples;
+      if (!hasMethod) return resolve(null);
+      (AppleHealthKit as any).getWalkingSpeedSamples(options, (err: any, results: any) => {
+        if (err || !results?.length) return resolve(null);
+        const avg = results.reduce((acc: number, s: any) => acc + (s.value || 0), 0) / results.length;
+        resolve(avg);
+      });
+    });
+
+    // 7. Mindful sessions (may error if no permission)
+    metrics.mindfulSessions = await new Promise((resolve) => {
+      const hasMethod = !!(AppleHealthKit as any).getMindfulSession;
+      if (!hasMethod) return resolve(null);
+      (AppleHealthKit as any).getMindfulSession(options, (err: any, results: any) => {
+        resolve(err ? 0 : results?.length || 0);
+      });
+    });
+
+    // 8. Mobility (may not exist)
+    metrics.mobility = await new Promise((resolve) => {
+      const hasMethod = !!(AppleHealthKit as any).getSixMinuteWalkTestDistance;
+      if (!hasMethod) return resolve(null);
+      (AppleHealthKit as any).getSixMinuteWalkTestDistance(options, (err: any, results: any) => {
+        resolve(err ? null : results?.[0]?.value || null);
+      });
+    });
+
+    // 9. Heart rate
+    metrics.heartRate = await getLatestHeartRate();
+    metrics.restingHeartRate = await getRestingHeartRate();
+
+    // 10. Sleep
+    metrics.sleep = await getSleepDetails(dateStr);
+
+    // 11. Blood oxygen (may error if no permission)
+    metrics.bloodOxygen = await new Promise((resolve) => {
+      (AppleHealthKit as any).getOxygenSaturationSamples?.({ limit: 1 }, (err: any, results: any) => {
+        resolve(err ? null : results?.[0]?.value || null);
+      }) || resolve(null);
+    });
+
+    // 12. Respiratory rate
+    metrics.respiratoryRate = await getLatestRespiratoryRate();
+
+    // 13. Body temperature (may error if no permission)
+    metrics.bodyTemperature = await new Promise((resolve) => {
+      (AppleHealthKit as any).getBodyTemperatureSamples?.({ limit: 1 }, (err: any, results: any) => {
+        resolve(err ? null : results?.[0]?.value || null);
+      }) || resolve(null);
+    });
+
+    // 14. Blood pressure (may error if no permission)
+    metrics.bloodPressure = await new Promise((resolve) => {
+      (AppleHealthKit as any).getBloodPressureSamples?.({ limit: 1 }, (err: any, results: any) => {
+        resolve(err ? null : results?.[0] || null);
+      }) || resolve(null);
+    });
+
+    return metrics;
+  } catch (error) {
+    console.error('[getAllHealthMetrics] Error:', error);
+    return null;
+  }
+};
+
+// ... (rest of the code remains the same)
