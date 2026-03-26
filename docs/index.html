@@ -3,69 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Politique de Confidentialité - Zeno Forme</title>
+    <title>Politique de Confidentialité — Zeno Forme</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --black: #0D0D0D;
+            --white: #FAFAFA;
+            --accent: #C8F000;
+            --gray-light: #F2F2F2;
+            --gray-mid: #D0D0D0;
+            --gray-text: #666;
+            --serif: 'DM Serif Display', Georgia, serif;
+            --sans: 'DM Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            font-family: var(--sans);
+            font-weight: 300;
+            background: var(--white);
+            color: var(--black);
+            line-height: 1.7;
         }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+        header {
+            border-bottom: 1px solid var(--gray-mid);
+            padding: 24px 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        h1 {
-            color: #0D0D0D;
-            border-bottom: 2px solid #E8F97D;
-            padding-bottom: 10px;
+
+        .logo {
+            font-family: var(--serif);
+            font-size: 1.25rem;
+            letter-spacing: -0.02em;
+            color: var(--black);
+            text-decoration: none;
         }
+
+        .logo span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            margin-left: 4px;
+            vertical-align: middle;
+            position: relative;
+            top: -1px;
+        }
+
+        .header-date {
+            font-size: 0.8rem;
+            color: var(--gray-text);
+            font-weight: 400;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        main {
+            max-width: 720px;
+            margin: 80px auto;
+            padding: 0 40px;
+        }
+
+        .page-title {
+            font-family: var(--serif);
+            font-size: 2.8rem;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 12px;
+        }
+
+        .page-subtitle {
+            color: var(--gray-text);
+            font-size: 0.95rem;
+            margin-bottom: 60px;
+        }
+
+        .highlight-block {
+            border-left: 3px solid var(--accent);
+            background: var(--gray-light);
+            padding: 20px 24px;
+            margin-bottom: 56px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: var(--black);
+        }
+
+        section {
+            margin-bottom: 48px;
+            padding-bottom: 48px;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        section:last-of-type {
+            border-bottom: none;
+        }
+
         h2 {
-            color: #333;
-            margin-top: 30px;
+            font-family: var(--serif);
+            font-size: 1.3rem;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+            margin-bottom: 20px;
+            color: var(--black);
         }
-        .update {
-            color: #666;
-            font-style: italic;
-            margin-bottom: 30px;
-        }
+
         ul {
-            margin-left: 20px;
+            list-style: none;
+            padding: 0;
         }
-        li {
-            margin-bottom: 10px;
+
+        ul li {
+            padding: 8px 0;
+            padding-left: 16px;
+            position: relative;
+            font-size: 0.92rem;
+            color: #444;
+            border-bottom: 1px solid var(--gray-light);
         }
-        .highlight {
-            background-color: #E8F97D;
-            padding: 15px;
-            border-radius: 5px;
-            font-weight: bold;
-            margin: 20px 0;
+
+        ul li:last-child { border-bottom: none; }
+
+        ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
         }
-        .contact {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 30px;
+
+        ul li strong {
+            font-weight: 500;
+            color: var(--black);
+        }
+
+        ul li ul {
+            margin-top: 8px;
+        }
+
+        ul li ul li {
+            font-size: 0.88rem;
+            color: var(--gray-text);
+            border-bottom: none;
+            padding: 4px 0 4px 16px;
+        }
+
+        .contact-block {
+            background: var(--gray-light);
+            padding: 28px 32px;
+            border-radius: 2px;
+        }
+
+        .contact-block p {
+            font-size: 0.88rem;
+            color: var(--gray-text);
+            margin-bottom: 16px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--gray-mid);
+            font-size: 0.9rem;
+        }
+
+        .contact-item:last-child { border-bottom: none; }
+
+        .contact-label {
+            font-weight: 500;
+            min-width: 60px;
+            color: var(--black);
+        }
+
+        .contact-value {
+            color: var(--gray-text);
+        }
+
+        .contact-value a {
+            color: inherit;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        footer {
+            border-top: 1px solid var(--gray-mid);
+            padding: 24px 60px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--gray-text);
+        }
+
+        @media (max-width: 600px) {
+            header, footer { padding: 20px 24px; }
+            main { padding: 0 24px; margin: 48px auto; }
+            .page-title { font-size: 2rem; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Politique de Confidentialité - Zeno Forme</h1>
-        
-        <p class="update"><strong>Dernière mise à jour : 24 mars 2024</strong></p>
-        
-        <div class="highlight">
-            Zeno Forme ne collecte AUCUNE donnée personnelle. Toutes vos données restent sur votre téléphone.
-        </div>
-        
-        <h2>📋 Collecte de données</h2>
+
+<header>
+    <a class="logo" href="#">Zeno Forme<span></span></a>
+    <span class="header-date">Mise à jour : 24 mars 2024</span>
+</header>
+
+<main>
+    <h1 class="page-title">Politique de<br>Confidentialité</h1>
+    <p class="page-subtitle">Applicable à l'application Zeno Forme sur iOS.</p>
+
+    <div class="highlight-block">
+        Zeno Forme ne collecte aucune donnée personnelle. Toutes vos données restent stockées localement sur votre appareil.
+    </div>
+
+    <section>
+        <h2>Collecte de données</h2>
         <ul>
             <li><strong>Aucune donnée personnelle n'est collectée</strong></li>
             <li>Toutes vos données restent sur votre téléphone :
@@ -76,43 +237,60 @@
                 </ul>
             </li>
         </ul>
-        
-        <h2>🔒 Utilisation des données</h2>
+    </section>
+
+    <section>
+        <h2>Utilisation des données</h2>
         <ul>
             <li><strong>Aucune donnée n'est partagée, vendue ou transmise à des tiers</strong></li>
             <li>Les données sont utilisées uniquement dans l'application pour votre suivi personnel</li>
         </ul>
-        
-        <h2>🏥 Santé (HealthKit)</h2>
+    </section>
+
+    <section>
+        <h2>Santé (HealthKit)</h2>
         <ul>
-            <li>Zeno Forme accède à l'app Santé UNIQUEMENT avec votre permission</li>
+            <li>Zeno Forme accède à l'app Santé uniquement avec votre permission explicite</li>
             <li>Les données sont synchronisées localement sur votre appareil</li>
             <li><strong>Aucune donnée de santé n'est envoyée vers des serveurs externes</strong></li>
         </ul>
-        
-        <h2>📱 Stockage local</h2>
+    </section>
+
+    <section>
+        <h2>Stockage local</h2>
         <ul>
             <li>Toutes les informations sont stockées dans la mémoire de votre téléphone</li>
             <li>Vous pouvez supprimer toutes vos données à tout moment en désinstallant l'application</li>
         </ul>
-        
-        <h2>🌐 Internet</h2>
+    </section>
+
+    <section>
+        <h2>Internet</h2>
         <ul>
             <li>Zeno Forme n'utilise Internet que pour les mises à jour de l'application</li>
             <li><strong>Aucune donnée personnelle n'est transmise en ligne</strong></li>
         </ul>
-        
-        <div class="contact">
-            <h2>👥 Contact</h2>
-            <p>Pour toute question sur cette politique de confidentialité :</p>
-            <ul>
-                <li><strong>Email :</strong> dez.theo31@gmail.com</li>
-                <li><strong>GitHub :</strong> <a href="https://github.com/theodez1/ZenoForme/issues">https://github.com/theodez1/ZenoForme/issues</a></li>
-            </ul>
+    </section>
+
+    <section>
+        <h2>Contact</h2>
+        <div class="contact-block">
+            <p>Pour toute question relative à cette politique de confidentialité :</p>
+            <div class="contact-item">
+                <span class="contact-label">Email</span>
+                <span class="contact-value"><a href="mailto:dez.theo31@gmail.com">dez.theo31@gmail.com</a></span>
+            </div>
+            <div class="contact-item">
+                <span class="contact-label">GitHub</span>
+                <span class="contact-value"><a href="https://github.com/theodez1/ZenoForme/issues" target="_blank">github.com/theodez1/ZenoForme/issues</a></span>
+            </div>
         </div>
-        
-        <hr style="margin-top: 30px;">
-        <p><em>Cette politique peut être mise à jour pour améliorer la transparence de notre utilisation des données.</em></p>
-    </div>
+    </section>
+</main>
+
+<footer>
+    Cette politique peut être mise à jour pour améliorer la transparence. &nbsp;—&nbsp; Zeno Forme
+</footer>
+
 </body>
 </html>

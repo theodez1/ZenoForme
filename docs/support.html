@@ -3,166 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Support - Zeno Forme</title>
+    <title>Support — Zeno Forme</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --black: #0D0D0D;
+            --white: #FAFAFA;
+            --accent: #C8F000;
+            --gray-light: #F2F2F2;
+            --gray-mid: #D0D0D0;
+            --gray-text: #666;
+            --serif: 'DM Serif Display', Georgia, serif;
+            --sans: 'DM Sans', sans-serif;
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
+            font-family: var(--sans);
+            font-weight: 300;
+            background: var(--white);
+            color: var(--black);
+            line-height: 1.7;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+
+        header {
+            border-bottom: 1px solid var(--gray-mid);
+            padding: 24px 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        h1 {
-            color: #667eea;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 40px;
-            font-size: 1.1em;
-        }
-        .section {
-            margin-bottom: 30px;
-        }
-        h2 {
-            color: #764ba2;
-            font-size: 1.5em;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-        p {
-            margin-bottom: 15px;
-            color: #555;
-        }
-        .contact-box {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            margin: 30px 0;
-        }
-        .contact-box h3 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.3em;
-        }
-        .email {
-            font-size: 1.2em;
-            color: #764ba2;
-            font-weight: 600;
+
+        .logo {
+            font-family: var(--serif);
+            font-size: 1.25rem;
+            letter-spacing: -0.02em;
+            color: var(--black);
             text-decoration: none;
+        }
+
+        .logo span {
             display: inline-block;
-            padding: 15px 30px;
-            background: white;
-            border-radius: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            margin-left: 4px;
+            vertical-align: middle;
+            position: relative;
+            top: -1px;
         }
-        .email:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+
+        .header-nav {
+            font-size: 0.82rem;
+            color: var(--gray-text);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 400;
         }
-        .faq-item {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
+
+        main {
+            max-width: 720px;
+            margin: 80px auto;
+            padding: 0 40px;
         }
-        .faq-item h4 {
-            color: #667eea;
+
+        .page-title {
+            font-family: var(--serif);
+            font-size: 2.8rem;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 12px;
+        }
+
+        .page-subtitle {
+            color: var(--gray-text);
+            font-size: 0.95rem;
+            margin-bottom: 60px;
+        }
+
+        .contact-card {
+            background: var(--black);
+            color: var(--white);
+            padding: 40px;
+            margin-bottom: 64px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        .contact-card-left h2 {
+            font-family: var(--serif);
+            font-size: 1.4rem;
+            font-weight: 400;
             margin-bottom: 10px;
-            font-size: 1.1em;
+            color: var(--white);
         }
-        .faq-item p {
-            margin: 0;
-            color: #666;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 30px;
-            border-top: 1px solid #eee;
+
+        .contact-card-left p {
+            font-size: 0.88rem;
             color: #999;
+            margin-bottom: 4px;
         }
+
+        .contact-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: var(--accent);
+            color: var(--black);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.88rem;
+            letter-spacing: 0.02em;
+            transition: opacity 0.2s;
+        }
+
+        .contact-link:hover { opacity: 0.85; }
+
+        section {
+            margin-bottom: 56px;
+        }
+
+        .section-title {
+            font-family: var(--serif);
+            font-size: 1.5rem;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+            margin-bottom: 28px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--gray-mid);
+        }
+
+        .faq-item {
+            border-bottom: 1px solid var(--gray-light);
+            padding: 20px 0;
+        }
+
+        .faq-item:last-child { border-bottom: none; }
+
+        .faq-question {
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: var(--black);
+            margin-bottom: 8px;
+        }
+
+        .faq-answer {
+            font-size: 0.9rem;
+            color: var(--gray-text);
+        }
+
+        .bug-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .bug-list li {
+            padding: 10px 0;
+            padding-left: 16px;
+            position: relative;
+            font-size: 0.92rem;
+            color: #444;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .bug-list li:last-child { border-bottom: none; }
+
+        .bug-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        .bug-intro {
+            font-size: 0.92rem;
+            color: var(--gray-text);
+            margin-bottom: 16px;
+        }
+
+        footer {
+            border-top: 1px solid var(--gray-mid);
+            padding: 24px 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--gray-text);
+        }
+
         @media (max-width: 600px) {
-            .container {
-                padding: 25px;
-            }
-            h1 {
-                font-size: 2em;
-            }
+            header, footer { padding: 20px 24px; flex-direction: column; gap: 8px; }
+            main { padding: 0 24px; margin: 48px auto; }
+            .page-title { font-size: 2rem; }
+            .contact-card { padding: 28px 24px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Support Zeno Forme</h1>
-        <p class="subtitle">Nous sommes là pour vous aider</p>
 
-        <div class="contact-box">
-            <h3>📧 Contactez-nous</h3>
+<header>
+    <a class="logo" href="#">Zeno Forme<span></span></a>
+    <span class="header-nav">Support</span>
+</header>
+
+<main>
+    <h1 class="page-title">Comment pouvons-nous<br>vous aider ?</h1>
+    <p class="page-subtitle">Consultez les questions fréquentes ou contactez notre équipe directement.</p>
+
+    <div class="contact-card">
+        <div class="contact-card-left">
+            <h2>Nous contacter</h2>
             <p>Une question, un problème ou une suggestion ?</p>
-            <a href="mailto:support@zenoforme.app" class="email">support@zenoforme.app</a>
-            <p style="margin-top: 20px; font-size: 0.9em;">Nous répondons généralement sous 24-48h</p>
-        </div>
-
-        <div class="section">
-            <h2>Questions fréquentes</h2>
-            
-            <div class="faq-item">
-                <h4>Comment synchroniser mes données Santé ?</h4>
-                <p>Zeno Forme se connecte automatiquement à l'app Santé d'Apple. Assurez-vous d'avoir autorisé l'accès lors du premier lancement de l'application. Vous pouvez modifier ces permissions dans Réglages > Santé > Accès aux données.</p>
-            </div>
-
-            <div class="faq-item">
-                <h4>Mes données sont-elles sécurisées ?</h4>
-                <p>Oui, toutes vos données restent sur votre appareil et dans votre compte iCloud. Nous ne collectons ni ne vendons aucune donnée personnelle. Consultez notre politique de confidentialité pour plus d'informations.</p>
-            </div>
-
-            <div class="faq-item">
-                <h4>L'application est-elle gratuite ?</h4>
-                <p>Oui, Zeno Forme est actuellement 100% gratuite. Certaines fonctionnalités premium pourront être ajoutées dans le futur.</p>
-            </div>
-
-            <div class="faq-item">
-                <h4>Comment réinitialiser mon objectif calorique ?</h4>
-                <p>Rendez-vous dans l'onglet "Bilan" puis "Profil". Vous pourrez modifier votre poids, taille, âge et l'app recalculera automatiquement vos objectifs.</p>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>Signaler un bug</h2>
-            <p>Si vous rencontrez un problème technique, veuillez nous contacter par email avec les informations suivantes :</p>
-            <ul style="margin-left: 20px; color: #555;">
-                <li>Version d'iOS</li>
-                <li>Modèle d'iPhone</li>
-                <li>Description du problème</li>
-                <li>Étapes pour reproduire le bug</li>
-            </ul>
-        </div>
-
-        <div class="footer">
-            <p>© 2026 Zeno Forme. Tous droits réservés.</p>
-            <p style="margin-top: 10px; font-size: 0.9em;">Made with 💪 pour votre santé</p>
+            <p>Nous répondons généralement sous 24 à 48 heures.</p>
+            <a href="mailto:dez.theo@gmail.com" class="contact-link">dez.theo@gmail.com</a>
         </div>
     </div>
+
+    <section>
+        <h2 class="section-title">Questions fréquentes</h2>
+
+        <div class="faq-item">
+            <p class="faq-question">Comment synchroniser mes données Santé ?</p>
+            <p class="faq-answer">Zeno Forme se connecte automatiquement à l'app Santé d'Apple. Assurez-vous d'avoir autorisé l'accès lors du premier lancement. Vous pouvez modifier ces permissions dans Réglages &gt; Santé &gt; Accès aux données.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-question">Mes données sont-elles sécurisées ?</p>
+            <p class="faq-answer">Oui. Toutes vos données restent sur votre appareil et dans votre compte iCloud. Nous ne collectons ni ne vendons aucune donnée personnelle. Consultez notre politique de confidentialité pour plus d'informations.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-question">L'application est-elle gratuite ?</p>
+            <p class="faq-answer">Oui, Zeno Forme est actuellement entièrement gratuite. Certaines fonctionnalités premium pourront être ajoutées dans le futur.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-question">Comment réinitialiser mon objectif calorique ?</p>
+            <p class="faq-answer">Rendez-vous dans l'onglet "Bilan" puis "Profil". Vous pourrez modifier votre poids, taille et âge — l'application recalculera automatiquement vos objectifs.</p>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="section-title">Signaler un bug</h2>
+        <p class="bug-intro">Si vous rencontrez un problème technique, contactez-nous par email avec les informations suivantes :</p>
+        <ul class="bug-list">
+            <li>Version d'iOS</li>
+            <li>Modèle d'iPhone</li>
+            <li>Description du problème</li>
+            <li>Étapes pour reproduire le bug</li>
+        </ul>
+    </section>
+</main>
+
+<footer>
+    <span>© 2026 Zeno Forme. Tous droits réservés.</span>
+    <span>Made for your health.</span>
+</footer>
+
 </body>
 </html>
