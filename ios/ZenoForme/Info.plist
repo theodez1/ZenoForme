@@ -32,7 +32,9 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>7</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSAppTransportSecurity</key>
@@ -42,16 +44,18 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
-        <key>NSCameraUsageDescription</key>
+    <key>NSCameraUsageDescription</key>
     <string>Pour prendre ta photo de progression quotidienne.</string>
     <key>NSHealthShareUsageDescription</key>
     <string>L'app utilise vos données Santé pour synchroniser vos calories, votre poids, vos pas, votre rythme cardiaque, votre sommeil, la distance parcourue et d'autres métriques pour vous offrir un tableau de bord complet.</string>
     <key>NSHealthUpdateUsageDescription</key>
     <string>L'app peut enregistrer vos calories et votre poids dans Santé pour les synchroniser avec vos autres applications comme Yazio ou Renpho.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Zeno Forme utilise le micro pour l'enregistrement vocal lors de la création de notes vocales sur tes progrès.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to save photos</string>
+    <string>Zeno Forme enregistre tes photos de progression dans la galerie pour que tu puisses les consulter et les partager facilement.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Pour choisir une photo depuis ta galerie.</string>
+    <string>Zeno Forme accède à tes photos pour te permettre de sélectionner une photo de profil ou d'ajouter des photos à ton suivi de progression corporelle.</string>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>
