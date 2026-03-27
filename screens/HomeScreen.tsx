@@ -19,7 +19,7 @@ import {
   getTodayCalories, getLatestWeight, getTodaySteps,
   getTodayActiveEnergy, getLatestHeartRate, getSleepDetails,
   getLatestBodyFat, logAllHealthData, getMealBreakdown,
-  MealBreakdown,
+  MealBreakdown, initHealth,
 } from '../utils/health';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -626,6 +626,13 @@ export default function HomeScreen() {
   useEffect(() => { activeDateRef.current = activeDate; }, [activeDate]);
 
   const loadMeta = useCallback(async () => {
+    // Demander les permissions HealthKit d'abord
+    try {
+      await initHealth();
+    } catch (e) {
+      console.log('[HealthKit] Permission error or already granted:', e);
+    }
+    
     const all = await getAllDays();
     setStreak(computeStreak(all));
     const p = await getProfile();

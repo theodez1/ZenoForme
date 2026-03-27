@@ -32,16 +32,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.theodez.zeno-forme",
-    buildNumber: "7",
+    buildNumber: "11",
     entitlements: {
       "com.apple.developer.healthkit": true
     },
     infoPlist: {
-      NSCameraUsageDescription: "Pour prendre ta photo de progression quotidienne.",
-      NSPhotoLibraryUsageDescription: "Pour choisir une photo depuis ta galerie.",
-      NSHealthShareUsageDescription: "L'app utilise vos données Santé pour synchroniser vos calories, votre poids, vos pas, votre rythme cardiaque, votre sommeil, la distance parcourue et d'autres métriques pour vous offrir un tableau de bord complet.",
-      NSHealthUpdateUsageDescription: "L'app peut enregistrer vos calories et votre poids dans Santé pour les synchroniser avec vos autres applications comme Yazio ou Renpho.",
-      NSPhotoLibraryAddUsageDescription: "Allow $(PRODUCT_NAME) to save photos",
+      NSCameraUsageDescription: "Autorise l'accès à l'appareil photo pour capturer tes photos de progression et suivre ton évolution physique jour après jour.",
+      NSPhotoLibraryUsageDescription: "Accède à ta bibliothèque pour importer tes repas ou tes photos de progression et centraliser tout ton historique.",
+      NSPhotoLibraryAddUsageDescription: "Permet à Zeno d'enregistrer tes photos de progression ou tes montages directement dans ta galerie photos.",
+      NSHealthShareUsageDescription: "Zeno utilise tes données de santé (pas, sommeil, calories) pour calculer ton score quotidien et personnaliser tes objectifs.",
+      NSHealthUpdateUsageDescription: "Permet à Zeno de synchroniser ton poids et tes calories avec l'app Santé pour garder toutes tes données à jour.",
       ITSAppUsesNonExemptEncryption: false
     }
   },
@@ -54,9 +54,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "CAMERA",
       "READ_EXTERNAL_STORAGE",
       "WRITE_EXTERNAL_STORAGE",
-      "ACCESS_FINE_LOCATION",
-      "android.permission.CAMERA",
-      "android.permission.RECORD_AUDIO"
+      "VIBRATE"
     ]
   },
   extra: {

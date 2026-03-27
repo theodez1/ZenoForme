@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { getProfile, updateProfile, UserProfile, getDay, todayString, getAllDays, updateDay, getDayScoreBreakdown, ScoreBreakdown } from '../utils/storage';
+import { getLatestWeight } from '../utils/health';
 import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -373,7 +374,11 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
 
   useFocusEffect(useCallback(() => {
     const load = async () => {
-      const [p, today] = await Promise.all([getProfile(), getDay(todayString())]);
+      const [p, today, hWeight] = await Promise.all([
+        getProfile(), 
+        getDay(todayString()),
+        getLatestWeight(todayString()) // Récupérer depuis HealthKit
+      ]);
 
       if (p) {
         setHeight(p.height?.toString() || '');
@@ -384,10 +389,38 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
         if (p.goal) setGoalWeight(p.goal.toString());
       }
 
+      // Déterminer le poids à afficher (priorité: local > HealthKit > dernier connu)
+      let displayWeight: number | null = null;
+      let isSynced = false;
+
+      if (today?.weight) {
+        // Poids déjà saisi manuellement aujourd'hui
+        displayWeight = today.weight;
+        isSynced = true;
+      } else if (hWeight) {
+        // Poids trouvé dans HealthKit pour aujourd'hui
+        displayWeight = hWeight;
+        isSynced = true;
+        // Sauvegarder dans le stockage local pour cohérence
+        await updateDay(todayString(), { weight: hWeight });
+      } else {
+        // Fallback: dernier poids connu
+        const all = await getAllDays();
+        const last = all.find(d => d.weight);
+        if (last?.weight) displayWeight = last.weight;
+      }
+
+      if (displayWeight) {
+        setWeight(displayWeight.toFixed(1));
+        setIsWeightSynced(isSynced);
+      }
+
+      setTodayEntry(today || { date: todayString() });
+
       // Calculate today's calorie goal
       const h = p?.height || 175;
       const a = p?.age || 30;
-      const w = today?.weight || 75;
+      const w = displayWeight || 75;
       const act = p?.activityFactor || 1.2;
       const bmr = p?.gender === 'female'
         ? 10 * w + 6.25 * h - 5 * a - 161
@@ -398,18 +431,12 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
       setCalorieGoal(calorieGoal);
 
       if (today) {
-        setTodayEntry(today);
-        setScoreBreakdown(getDayScoreBreakdown(today, calorieGoal));
-        if (today.weight) {
-          setWeight(today.weight.toFixed(1));
-          setIsWeightSynced(true);
+        try {
+          const breakdown = getDayScoreBreakdown(today, calorieGoal);
+          setScoreBreakdown(breakdown);
+        } catch (e) {
+          console.error('[SCORE ERROR]', e);
         }
-      } else {
-        // Find last known weight if not today
-        const all = await getAllDays();
-        const last = all.find(d => d.weight);
-        if (last?.weight) setWeight(last.weight.toFixed(1));
-        setIsWeightSynced(false);
       }
     };
     load();

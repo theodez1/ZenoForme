@@ -46,7 +46,7 @@ export default function PhotosScreen() {
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return Alert.alert('Permission requise', 'Active la caméra dans les réglages.');
+    if (status !== 'granted') return Alert.alert('Accès Caméra', "Zeno a besoin de la caméra pour tes photos de progression. Active l'accès dans les réglages de ton téléphone.");
     const result = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true, aspect: [3, 4] });
     if (!result.canceled && result.assets[0]) {
       const uri = await persistImage(result.assets[0].uri);
@@ -57,7 +57,7 @@ export default function PhotosScreen() {
 
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return Alert.alert('Permission requise', 'Active l\'accès aux photos dans les réglages.');
+    if (status !== 'granted') return Alert.alert('Accès Photos', "Zeno a besoin d'accéder à tes photos pour importer tes repas. Active l'accès dans les réglages de ton téléphone.");
     const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8, allowsEditing: true, aspect: [3, 4] });
     if (!result.canceled && result.assets[0]) {
       const uri = await persistImage(result.assets[0].uri);
